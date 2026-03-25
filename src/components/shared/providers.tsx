@@ -1,7 +1,9 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useCallback, useMemo } from "react";
 import { AuthContext } from "@/hooks/use-auth";
+import { LoginModalContext } from "@/hooks/use-login-modal";
+import { LoginModal } from "@/components/shared/login-modal";
 import type { User } from "@/types/user";
 
 interface ProvidersProps {
@@ -10,9 +12,21 @@ interface ProvidersProps {
 }
 
 export function Providers({ children, user }: ProvidersProps) {
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const openLogin = useCallback(() => setLoginOpen(true), []);
+  const closeLogin = useCallback(() => setLoginOpen(false), []);
+  const loginModalValue = useMemo(
+    () => ({ open: loginOpen, openLogin, closeLogin }),
+    [loginOpen, openLogin, closeLogin]
+  );
+
   return (
     <AuthContext.Provider value={{ user }}>
-      {children}
+      <LoginModalContext.Provider value={loginModalValue}>
+        {children}
+        <LoginModal />
+      </LoginModalContext.Provider>
     </AuthContext.Provider>
   );
 }

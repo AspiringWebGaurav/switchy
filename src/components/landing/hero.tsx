@@ -1,38 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase/client";
 import { ArrowRight, Zap, Shield, Globe } from "lucide-react";
+import { useLoginModal } from "@/hooks/use-login-modal";
 
 export function LandingHero() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  async function handleGetStarted() {
-    try {
-      setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
-
-      const res = await fetch("/api/v1/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (res.ok) {
-        window.location.href = "/dashboard";
-        return;
-      }
-    } catch (err) {
-      console.error("Login failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { openLogin } = useLoginModal();
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden bg-stone-50">
@@ -67,39 +40,14 @@ export function LandingHero() {
             className="mt-10"
           >
             <button
-              onClick={handleGetStarted}
-              disabled={loading}
-              className="glow-border-filled group inline-flex items-center gap-2 rounded-full bg-indigo-500 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={openLogin}
+              className="glow-border-filled group inline-flex items-center gap-2 rounded-full bg-indigo-500 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-500/25"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                <>
-                  Get Started
-                  <ArrowRight
-                    size={16}
-                    className="transition-transform group-hover:translate-x-0.5"
-                  />
-                </>
-              )}
+              Get Started
+              <ArrowRight
+                size={16}
+                className="transition-transform group-hover:translate-x-0.5"
+              />
             </button>
           </motion.div>
         </motion.div>

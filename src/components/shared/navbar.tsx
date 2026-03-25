@@ -6,11 +6,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/shared/logo";
 import { LogOut, BookOpen } from "lucide-react";
+import { useLoginModal } from "@/hooks/use-login-modal";
 
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { openLogin } = useLoginModal();
   const isDocsPage = pathname === "/docs";
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -111,8 +113,8 @@ export function Navbar() {
             </div>
           ) : (
             <button
-              onClick={() => router.push("/login")}
-              className="glow-border px-5 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:text-stone-900"
+              onClick={openLogin}
+              className="glow-border rounded-full px-5 py-1.5 text-sm font-medium text-stone-700 transition-all hover:text-stone-900 hover:bg-stone-100 hover:shadow-sm active:scale-95"
             >
               Login
             </button>
