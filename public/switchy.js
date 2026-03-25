@@ -10,7 +10,7 @@
   var projectId = params.get("project");
 
   if (!key || !projectId) {
-    console.error("[Switchy] Missing key or project parameter in script tag.");
+    console.error("[Switchyy] Missing key or project parameter in script tag.");
     return;
   }
 
@@ -20,7 +20,7 @@
 
   fetch(endpoint)
     .then(function (res) {
-      if (!res.ok) throw new Error("Switchy: HTTP " + res.status);
+      if (!res.ok) throw new Error("Switchyy: HTTP " + res.status);
       return res.json();
     })
     .then(function (json) {
@@ -59,7 +59,7 @@
 
       var sub = document.createElement("p");
       sub.style.cssText = "margin:0;font-size:13px;color:#a8a29e;";
-      sub.textContent = "Powered by Switchy";
+      sub.textContent = "Powered by Switchyy";
 
       card.appendChild(icon);
       card.appendChild(h1);
@@ -81,6 +81,6 @@
       document.body.appendChild(overlay);
     })
     .catch(function (err) {
-      console.error("[Switchy]", err.message);
+      console.error("[Switchyy]", err.message);
     });
 })();

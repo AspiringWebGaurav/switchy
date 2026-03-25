@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Wifi, ShieldAlert } from "lucide-react";
 import { ModeToggle } from "@/components/project/mode-toggle";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { CustomConfig } from "@/components/project/custom-config";
@@ -199,6 +199,29 @@ export default function ProjectPage() {
                 onChange={handleModeChange}
                 disabled={saving}
               />
+
+              {/* Mode status indicator */}
+              <div className="mt-4">
+                {mode === "live" ? (
+                  <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                    <Wifi size={15} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-emerald-700">Connected — Website runs as-is</p>
+                      <p className="text-[11px] text-emerald-600/70 mt-0.5">Your key is active. No overlay will be shown to visitors.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+                    <ShieldAlert size={15} className="text-amber-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-amber-700">
+                        Overlay active — {mode === "maintenance" ? "Maintenance screen" : "Custom message"} shown to visitors
+                      </p>
+                      <p className="text-[11px] text-amber-600/70 mt-0.5">Switch to Live when you want your website to run normally.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Custom config - visible when mode is custom */}
               {mode === "custom" && (

@@ -10,9 +10,9 @@ interface ModeToggleProps {
 }
 
 const modes: { value: ModeValue; label: string; color: string }[] = [
-  { value: "live", label: "Live", color: "bg-emerald-500" },
   { value: "maintenance", label: "Maintenance", color: "bg-amber-500" },
   { value: "custom", label: "Custom", color: "bg-violet-500" },
+  { value: "live", label: "Live", color: "bg-emerald-500" },
 ];
 
 export function ModeToggle({ value, onChange, disabled }: ModeToggleProps) {

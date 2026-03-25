@@ -1,7 +1,14 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDecision } from "@/lib/services/decision.service";
 import { checkRateLimit } from "@/lib/utils/rate-limit";
 import { success, error } from "@/lib/utils/response";
+
+function withCors(res: NextResponse): NextResponse {
+  res.headers.set("Access-Control-Allow-Origin", "*");
+  res.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return res;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,7 +16,7 @@ export async function GET(request: NextRequest) {
   const key = searchParams.get("key");
 
   if (!projectId || !key) {
-    return error("Missing projectId or key", 400);
+    return withCors(error("Missing projectId or key", 400));
   }
 
   // Rate limiting
@@ -20,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   const rateLimit = await checkRateLimit(ip, projectId);
   if (!rateLimit.allowed) {
-    const res = error("Rate limit exceeded", 429);
+    const res = withCors(error("Rate limit exceeded", 429));
     res.headers.set("X-RateLimit-Remaining", "0");
     return res;
   }
@@ -29,10 +36,10 @@ export async function GET(request: NextRequest) {
   const decision = await getDecision(projectId, key);
 
   if (!decision) {
-    return error("Invalid project or key", 401);
+    return withCors(error("Invalid project or key", 401));
   }
 
-  const res = success(decision);
+  const res = withCors(success(decision));
   res.headers.set(
     "Cache-Control",
     "public, s-maxage=30, stale-while-revalidate=60"
@@ -41,9 +48,6 @@ export async function GET(request: NextRequest) {
     "X-RateLimit-Remaining",
     rateLimit.remaining.toString()
   );
-  res.headers.set("Access-Control-Allow-Origin", "*");
-  res.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.headers.set("Access-Control-Allow-Headers", "Content-Type");
 
   return res;
 }
