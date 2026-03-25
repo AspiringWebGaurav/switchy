@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check, Code2, Terminal, Key } from "lucide-react";
+import { APP_NAME } from "@/config/constants";
 
 interface IntegrationPanelProps {
   projectId: string;

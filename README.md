@@ -1,10 +1,10 @@
-# Switchy
+# Switchyy
 
 Real-time mode control for your websites and applications. Switch between live, maintenance, and custom modes instantly — no code changes, no redeployments.
 
-## What is Switchy?
+## What is Switchyy?
 
-Switchy is a SaaS platform that gives you a remote control for your app's behavior. Create a project, set a mode, and your app checks with Switchy on every load to know how to behave.
+Switchyy is a SaaS platform that gives you a remote control for your app's behavior. Create a project, set a mode, and your app checks with Switchyy on every load to know how to behave.
 
 **Key features:**
 - One-click mode switching (Live / Maintenance / Custom)

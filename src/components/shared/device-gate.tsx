@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { APP_NAME } from "@/config/constants";
 
 interface DeviceGateProps {
   children: ReactNode;
@@ -40,7 +41,7 @@ export function DeviceGate({ children }: DeviceGateProps) {
             Desktop Only
           </h1>
           <p className="text-stone-600 text-base leading-relaxed mb-2">
-            Switchy is currently optimized for desktop. Mobile support is coming
+            {APP_NAME} is currently optimized for desktop. Mobile support is coming
             soon.
           </p>
           <p className="text-stone-400 text-sm">

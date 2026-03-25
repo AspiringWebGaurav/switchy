@@ -24,7 +24,8 @@ export function LandingHero() {
       });
 
       if (res.ok) {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
+        return;
       }
     } catch (err) {
       console.error("Login failed:", err);

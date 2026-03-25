@@ -12,9 +12,10 @@ import {
   Shield,
   ChevronRight,
 } from "lucide-react";
+import { APP_NAME } from "@/config/constants";
 
 const sections = [
-  { id: "what-is-switchy", label: "What is Switchy", icon: Zap },
+  { id: "what-is-switchy", label: `What is ${APP_NAME}`, icon: Zap },
   { id: "how-it-works", label: "How It Works", icon: Layers },
   { id: "getting-started", label: "Getting Started", icon: Rocket },
   { id: "integration", label: "Integration", icon: Code2 },
@@ -101,27 +102,27 @@ export default function DocsPage() {
             ))}
           </div>
 
-          {/* Section 1: What is Switchy */}
+          {/* Section 1: What is Switchyy */}
           <section id="what-is-switchy" className="scroll-mt-20 mb-16">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50">
                   <Zap size={18} className="text-indigo-500" />
                 </div>
-                <h1 className="text-2xl font-bold text-stone-900">What is Switchy</h1>
+                <h1 className="text-2xl font-bold text-stone-900">What is {APP_NAME}</h1>
               </div>
               <p className="text-stone-600 leading-relaxed mb-4">
-                Switchy is a real-time mode control platform for your websites and applications.
+                {APP_NAME} is a real-time mode control platform for your websites and applications.
                 It lets you instantly switch your app between different states — like <strong>live</strong>,{" "}
                 <strong>maintenance</strong>, or a <strong>custom mode</strong> — without writing code,
                 redeploying, or touching your server.
               </p>
               <p className="text-stone-600 leading-relaxed mb-4">
-                Think of it as a remote control for your app&apos;s behavior. One click in the Switchy
-                dashboard, and every user visiting your app sees the updated state immediately.
+                Think of it as a remote control for your app&apos;s behavior. One click in the {APP_NAME}
+                {" "}dashboard, and every user visiting your app sees the updated state immediately.
               </p>
               <div className="rounded-xl border border-stone-200 bg-stone-50 p-5 mt-6">
-                <h3 className="text-sm font-semibold text-stone-900 mb-2">Why Switchy?</h3>
+                <h3 className="text-sm font-semibold text-stone-900 mb-2">Why {APP_NAME}?</h3>
                 <ul className="space-y-2 text-sm text-stone-600">
                   <li className="flex items-start gap-2">
                     <ChevronRight size={14} className="text-indigo-400 mt-0.5 shrink-0" />
@@ -153,8 +154,8 @@ export default function DocsPage() {
               <h2 className="text-2xl font-bold text-stone-900">How It Works</h2>
             </div>
             <p className="text-stone-600 leading-relaxed mb-6">
-              Switchy follows a simple flow: you create a project, set a mode, and your app checks
-              with Switchy to know how to behave. Here&apos;s the full picture:
+              {APP_NAME} follows a simple flow: you create a project, set a mode, and your app checks
+              with {APP_NAME} to know how to behave. Here&apos;s the full picture:
             </p>
             <div className="space-y-4">
               {[
@@ -171,7 +172,7 @@ export default function DocsPage() {
                 {
                   step: "3",
                   title: "Integrate",
-                  desc: "Add a script tag to your HTML or call the decision API directly. Your app now checks with Switchy on every load.",
+                  desc: `Add a script tag to your HTML or call the decision API directly. Your app now checks with ${APP_NAME} on every load.`,
                 },
                 {
                   step: "4",
@@ -231,7 +232,7 @@ export default function DocsPage() {
               </li>
             </ul>
             <p className="text-stone-600 leading-relaxed">
-              Both are needed to integrate Switchy into your app.
+              Both are needed to integrate {APP_NAME} into your app.
             </p>
           </section>
 
@@ -244,7 +245,7 @@ export default function DocsPage() {
               <h2 className="text-2xl font-bold text-stone-900">Integration</h2>
             </div>
             <p className="text-stone-600 leading-relaxed mb-6">
-              There are two ways to connect your app to Switchy. Choose the one that fits your stack.
+              There are two ways to connect your app to {APP_NAME}. Choose the one that fits your stack.
             </p>
 
             <h3 className="text-base font-semibold text-stone-900 mt-6 mb-3">Script Tag (Easiest)</h3>
@@ -367,7 +368,7 @@ export default function DocsPage() {
               <h2 className="text-2xl font-bold text-stone-900">Examples</h2>
             </div>
             <p className="text-stone-600 leading-relaxed mb-6">
-              Here are real-world scenarios where Switchy fits perfectly.
+              Here are real-world scenarios where {APP_NAME} fits perfectly.
             </p>
 
             <div className="space-y-4">
@@ -451,7 +452,7 @@ export default function DocsPage() {
               <div>
                 <h4 className="text-sm font-semibold text-stone-900 mb-1">Handle API errors gracefully</h4>
                 <p className="text-sm text-stone-600">
-                  If using the API directly, always handle the case where Switchy is unreachable.
+                  If using the API directly, always handle the case where {APP_NAME} is unreachable.
                   Default to showing your app normally (fail open) rather than blocking users.
                 </p>
               </div>
@@ -469,7 +470,7 @@ export default function DocsPage() {
           {/* Footer */}
           <div className="border-t border-stone-200 pt-8 mt-8">
             <p className="text-sm text-stone-400 text-center">
-              Switchy Documentation &middot; Built for developers who ship fast
+              {APP_NAME} Documentation &middot; Built for developers who ship fast
             </p>
           </div>
         </div>

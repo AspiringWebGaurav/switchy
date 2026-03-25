@@ -1,4 +1,5 @@
 import { Zap } from "lucide-react";
+import { APP_NAME } from "@/config/constants";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -22,7 +23,7 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
         <span
           className={`font-semibold tracking-tight text-stone-900 ${s.text}`}
         >
-          Switchy
+          {APP_NAME}
         </span>
       )}
     </div>
