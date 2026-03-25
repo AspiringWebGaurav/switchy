@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/shared/logo";
@@ -68,9 +69,11 @@ export function Navbar() {
                 className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-stone-200 transition-all hover:ring-indigo-300 focus:outline-none focus:ring-indigo-400"
               >
                 {user.avatar ? (
-                  <img
+                  <Image
                     src={user.avatar}
                     alt={user.name}
+                    width={36}
+                    height={36}
                     className="h-full w-full object-cover"
                     referrerPolicy="no-referrer"
                   />

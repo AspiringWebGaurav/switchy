@@ -93,7 +93,7 @@ export function ConfirmModal({
                       : "bg-indigo-500 hover:bg-indigo-600"
                   }`}
                 >
-                  {loading ? "Deleting..." : confirmLabel}
+                  {loading ? "Processing..." : confirmLabel}
                 </button>
               </div>
             </div>

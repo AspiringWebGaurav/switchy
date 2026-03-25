@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, Save, Wifi, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Wifi, ShieldAlert, Power, RotateCw } from "lucide-react";
 import { ModeToggle } from "@/components/project/mode-toggle";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { CustomConfig } from "@/components/project/custom-config";
@@ -34,7 +34,11 @@ export default function ProjectPage() {
     redirectUrl: null,
   });
 
-  const [apiStatus, setApiStatus] = useState<"checking" | "connected" | "disconnected">("checking");
+  type ConnectionState = "waiting" | "connected" | "disconnected";
+  const [connectionState, setConnectionState] = useState<ConnectionState>("waiting");
+  const [toggling, setToggling] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -46,6 +50,9 @@ export default function ProjectPage() {
       const json = await res.json();
       const data = json.data as ProjectData;
       setProject(data);
+      if (data.enabled === true) setConnectionState("connected");
+      else if (data.enabled === false) setConnectionState("disconnected");
+      else setConnectionState("waiting");
       if (data.policy) {
         setMode(data.policy.value);
         setConfig(data.policy.config);
@@ -61,26 +68,67 @@ export default function ProjectPage() {
     fetchProject();
   }, [fetchProject]);
 
-  // Live API connectivity check — pings the public decide endpoint with actual keys
-  const checkApiConnection = useCallback(async () => {
+  // Poll only when waiting for first connection — auto-stops after 30s
+  useEffect(() => {
+    if (connectionState !== "waiting" || loading) return;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/v1/projects/${projectId}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.data?.enabled === true) {
+          setConnectionState("connected");
+          setProject((prev) => prev ? { ...prev, enabled: true } : prev);
+          stopPolling();
+        }
+      } catch { /* silent */ }
+    };
+
+    function stopPolling() {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
+    }
+
+    pollRef.current = setInterval(poll, 5000);
+    pollTimeoutRef.current = setTimeout(stopPolling, 30000);
+
+    return stopPolling;
+  }, [connectionState, loading, projectId]);
+
+  async function handleDisconnect() {
     if (!project) return;
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const res = await fetch(
-        `${origin}/api/v1/decide?projectId=${project.id}&key=${project.publicKey}`,
-        { cache: "no-store" }
-      );
-      setApiStatus(res.ok ? "connected" : "disconnected");
-    } catch {
-      setApiStatus("disconnected");
-    }
-  }, [project]);
+      setToggling(true);
+      const res = await fetch(`/api/v1/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: false }),
+      });
+      if (res.ok) {
+        setConnectionState("disconnected");
+        setProject({ ...project, enabled: false });
+      }
+    } catch { /* silent */ }
+    finally { setToggling(false); }
+  }
 
-  useEffect(() => {
-    checkApiConnection();
-    const interval = setInterval(checkApiConnection, 30000);
-    return () => clearInterval(interval);
-  }, [checkApiConnection]);
+  async function handleReconnect() {
+    if (!project) return;
+    try {
+      setToggling(true);
+      const res = await fetch(`/api/v1/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true }),
+      });
+      if (res.ok) {
+        setConnectionState("connected");
+        setProject({ ...project, enabled: true });
+      }
+    } catch { /* silent */ }
+    finally { setToggling(false); }
+  }
 
   async function handleModeChange(newMode: ModeValue) {
     setMode(newMode);
@@ -171,12 +219,7 @@ export default function ProjectPage() {
                 <h1 className="text-lg font-semibold text-stone-900">
                   {project.name}
                 </h1>
-                {apiStatus === "checking" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-[10px] font-medium text-stone-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse" />
-                    Checking
-                  </span>
-                ) : apiStatus === "connected" ? (
+                {connectionState === "connected" ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-medium text-emerald-700">
                     <span className="relative flex h-1.5 w-1.5">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -184,25 +227,58 @@ export default function ProjectPage() {
                     </span>
                     Connected
                   </span>
-                ) : (
+                ) : connectionState === "disconnected" ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-medium text-red-600">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     Disconnected
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-amber-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    Not Connected
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-stone-400 font-mono">{project.id}</p>
             </div>
           </div>
-          <button
-            onClick={() => setDeleteModalOpen(true)}
-            disabled={deleting}
-            className="flex items-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-            title="Delete project"
-          >
-            <Trash2 size={15} />
-            <span className="hidden sm:inline text-xs font-medium">Delete</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {connectionState === "connected" && (
+              <button
+                onClick={handleDisconnect}
+                disabled={toggling}
+                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 transition-all hover:bg-red-100 disabled:opacity-50"
+                title="Disconnect key"
+              >
+                <Power size={15} />
+                <span className="text-xs font-medium">
+                  {toggling ? "..." : "Disconnect"}
+                </span>
+              </button>
+            )}
+            {connectionState === "disconnected" && (
+              <button
+                onClick={handleReconnect}
+                disabled={toggling}
+                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 transition-all hover:bg-emerald-100 disabled:opacity-50"
+                title="Reconnect key"
+              >
+                <RotateCw size={15} />
+                <span className="text-xs font-medium">
+                  {toggling ? "..." : "Reconnect"}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => setDeleteModalOpen(true)}
+              disabled={deleting}
+              className="flex items-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+              title="Delete project"
+            >
+              <Trash2 size={15} />
+              <span className="hidden sm:inline text-xs font-medium">Delete</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -299,6 +375,7 @@ export default function ProjectPage() {
           <IntegrationPanel
             projectId={project.id}
             publicKey={project.publicKey}
+            connectionState={connectionState}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@ export interface Project {
   ownerId: string;
   name: string;
   publicKey: string;
+  enabled?: boolean;
   createdAt: number;
   updatedAt: number;
 }

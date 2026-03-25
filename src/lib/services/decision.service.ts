@@ -1,4 +1,4 @@
-import { getProjectByPublicKey } from "@/lib/services/project.service";
+import { getProjectByPublicKey, updateProject } from "@/lib/services/project.service";
 import { getModePolicy } from "@/lib/services/policy.service";
 import { redisGet, redisSet } from "@/lib/redis/client";
 import { CACHE_TTL } from "@/config/constants";
@@ -16,6 +16,14 @@ export async function getDecision(
   // Validate project + key
   const project = await getProjectByPublicKey(projectId, publicKey);
   if (!project) return null;
+
+  // Block if manually disconnected
+  if (project.enabled === false) return null;
+
+  // Auto-connect on first valid request (enabled is undefined for new projects)
+  if (project.enabled === undefined) {
+    await updateProject(projectId, { enabled: true });
+  }
 
   // Get mode policy
   const policy = await getModePolicy(projectId);

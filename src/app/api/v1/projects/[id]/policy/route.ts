@@ -8,32 +8,36 @@ import { success, error } from "@/lib/utils/response";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
-  const user = await verifySession();
-  if (!user) return error("Unauthorized", 401);
+  try {
+    const user = await verifySession();
+    if (!user) return error("Unauthorized", 401);
 
-  const { id } = await context.params;
-  const project = await getProjectById(id);
+    const { id } = await context.params;
+    const project = await getProjectById(id);
 
-  if (!project) return error("Project not found", 404);
-  if (project.ownerId !== user.uid) return error("Forbidden", 403);
+    if (!project) return error("Project not found", 404);
+    if (project.ownerId !== user.uid) return error("Forbidden", 403);
 
-  const policy = await getModePolicy(id);
-  if (!policy) return error("Policy not found", 404);
+    const policy = await getModePolicy(id);
+    if (!policy) return error("Policy not found", 404);
 
-  return success(policy);
+    return success(policy);
+  } catch (err) {
+    console.error("[Policy] Get failed:", err);
+    return error("Failed to get policy", 500);
+  }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const user = await verifySession();
-  if (!user) return error("Unauthorized", 401);
-
-  const { id } = await context.params;
-  const project = await getProjectById(id);
-
-  if (!project) return error("Project not found", 404);
-  if (project.ownerId !== user.uid) return error("Forbidden", 403);
-
   try {
+    const user = await verifySession();
+    if (!user) return error("Unauthorized", 401);
+
+    const { id } = await context.params;
+    const project = await getProjectById(id);
+
+    if (!project) return error("Project not found", 404);
+    if (project.ownerId !== user.uid) return error("Forbidden", 403);
     const body = await request.json();
     const parsed = updatePolicySchema.safeParse(body);
 

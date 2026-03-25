@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { generatePublicKey } from "@/lib/utils/keys";
 import { DEFAULT_MODE_POLICY } from "@/config/policies";
+import { redisDel } from "@/lib/redis/client";
 import type { Project } from "@/types/project";
 import type { ModePolicy } from "@/types/policy";
 
@@ -46,9 +47,13 @@ export async function getProjectsByOwner(ownerId: string): Promise<Project[]> {
 export async function getProjectById(
   projectId: string
 ): Promise<Project | null> {
-  const doc = await projectsRef.doc(projectId).get();
-  if (!doc.exists) return null;
-  return doc.data() as Project;
+  try {
+    const doc = await projectsRef.doc(projectId).get();
+    if (!doc.exists) return null;
+    return doc.data() as Project;
+  } catch {
+    return null;
+  }
 }
 
 export async function getProjectByPublicKey(
@@ -62,12 +67,17 @@ export async function getProjectByPublicKey(
 
 export async function updateProject(
   projectId: string,
-  data: Partial<Pick<Project, "name">>
+  data: Partial<Pick<Project, "name" | "enabled">>
 ): Promise<void> {
   await projectsRef.doc(projectId).update({
     ...data,
     updatedAt: Date.now(),
   });
+
+  // Invalidate decision cache when key is toggled
+  if (data.enabled !== undefined) {
+    await redisDel(`decide:${projectId}`);
+  }
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
@@ -80,4 +90,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   batch.delete(docRef);
 
   await batch.commit();
+
+  // Invalidate decision cache
+  await redisDel(`decide:${projectId}`);
 }

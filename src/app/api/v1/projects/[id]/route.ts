@@ -12,18 +12,23 @@ import { success, error } from "@/lib/utils/response";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
-  const user = await verifySession();
-  if (!user) return error("Unauthorized", 401);
+  try {
+    const user = await verifySession();
+    if (!user) return error("Unauthorized", 401);
 
-  const { id } = await context.params;
-  const project = await getProjectById(id);
+    const { id } = await context.params;
+    const project = await getProjectById(id);
 
-  if (!project) return error("Project not found", 404);
-  if (project.ownerId !== user.uid) return error("Forbidden", 403);
+    if (!project) return error("Project not found", 404);
+    if (project.ownerId !== user.uid) return error("Forbidden", 403);
 
-  const policy = await getModePolicy(id);
+    const policy = await getModePolicy(id);
 
-  return success({ ...project, policy });
+    return success({ ...project, policy });
+  } catch (err) {
+    console.error("[Project] Get failed:", err);
+    return error("Failed to get project", 500);
+  }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -54,20 +59,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const user = await verifySession();
-  if (!user) return error("Unauthorized", 401);
-
-  const { id } = await context.params;
-  const project = await getProjectById(id);
-
-  if (!project) return error("Project not found", 404);
-  if (project.ownerId !== user.uid) return error("Forbidden", 403);
-
   try {
+    const user = await verifySession();
+    if (!user) return error("Unauthorized", 401);
+
+    const { id } = await context.params;
+    const project = await getProjectById(id);
+
+    if (!project) return error("Project not found", 404);
+    if (project.ownerId !== user.uid) return error("Forbidden", 403);
+
     await deleteProject(id);
     return success({ message: "Project deleted" });
   } catch (err) {
-    console.error("[Projects] Delete failed:", err);
+    console.error("[Project] Delete failed:", err);
     return error("Failed to delete project", 500);
   }
 }

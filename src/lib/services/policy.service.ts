@@ -35,10 +35,9 @@ export async function updateModePolicy(
     type: "mode",
     value,
     config: {
-      message: config?.message ?? existingData?.config?.message ?? null,
-      buttonText: config?.buttonText ?? existingData?.config?.buttonText ?? null,
-      redirectUrl:
-        config?.redirectUrl ?? existingData?.config?.redirectUrl ?? null,
+      message: config && "message" in config ? config.message ?? null : existingData?.config?.message ?? null,
+      buttonText: config && "buttonText" in config ? config.buttonText ?? null : existingData?.config?.buttonText ?? null,
+      redirectUrl: config && "redirectUrl" in config ? config.redirectUrl ?? null : existingData?.config?.redirectUrl ?? null,
     },
     updatedAt: Date.now(),
     updatedBy: uid,

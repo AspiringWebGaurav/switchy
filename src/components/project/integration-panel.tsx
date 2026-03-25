@@ -1,20 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, Check, Code2, Terminal, Key } from "lucide-react";
-import { APP_NAME } from "@/config/constants";
+
+type ConnectionState = "waiting" | "connected" | "disconnected";
 
 interface IntegrationPanelProps {
   projectId: string;
   publicKey: string;
+  connectionState: ConnectionState;
 }
 
-export function IntegrationPanel({ projectId, publicKey }: IntegrationPanelProps) {
+function StatusBadge({ state }: { state: ConnectionState }) {
+  if (state === "connected") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        </span>
+        Live
+      </span>
+    );
+  }
+  if (state === "disconnected") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        Disabled
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+      Waiting
+    </span>
+  );
+}
+
+export function IntegrationPanel({ projectId, publicKey, connectionState }: IntegrationPanelProps) {
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedApi, setCopiedApi] = useState(false);
+  const [appUrl, setAppUrl] = useState("");
 
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+  useEffect(() => {
+    setAppUrl(window.location.origin);
+  }, []);
 
   const scriptSnippet = `<script src="${appUrl}/switchy.js?key=${publicKey}&project=${projectId}"></script>`;
   const apiEndpoint = `${appUrl}/api/v1/decide?projectId=${projectId}&key=${publicKey}`;
@@ -63,15 +96,18 @@ export function IntegrationPanel({ projectId, publicKey }: IntegrationPanelProps
       </div>
 
       {/* Script Tag */}
-      <div className="rounded-2xl border border-stone-200 bg-white p-5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
-            <Code2 size={15} className="text-indigo-500" />
+      <div className={`rounded-2xl border bg-white p-5 transition-all ${connectionState === "disconnected" ? "border-stone-200 opacity-60" : "border-stone-200"}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
+              <Code2 size={15} className="text-indigo-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-stone-900">Script Tag</h3>
+              <p className="text-xs text-stone-400">Add to your HTML head</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-stone-900">Script Tag</h3>
-            <p className="text-xs text-stone-400">Add to your HTML head</p>
-          </div>
+          <StatusBadge state={connectionState} />
         </div>
         <div className="relative">
           <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 pr-20">
@@ -99,15 +135,18 @@ export function IntegrationPanel({ projectId, publicKey }: IntegrationPanelProps
       </div>
 
       {/* API Endpoint */}
-      <div className="rounded-2xl border border-stone-200 bg-white p-5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
-            <Terminal size={15} className="text-emerald-500" />
+      <div className={`rounded-2xl border bg-white p-5 transition-all ${connectionState === "disconnected" ? "border-stone-200 opacity-60" : "border-stone-200"}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+              <Terminal size={15} className="text-emerald-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-stone-900">API Endpoint</h3>
+              <p className="text-xs text-stone-400">Query your project mode directly</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-stone-900">API Endpoint</h3>
-            <p className="text-xs text-stone-400">Query your project mode directly</p>
-          </div>
+          <StatusBadge state={connectionState} />
         </div>
         <div className="relative">
           <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 pr-20">
