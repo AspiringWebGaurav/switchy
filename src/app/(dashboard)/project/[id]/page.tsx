@@ -34,6 +34,8 @@ export default function ProjectPage() {
     redirectUrl: null,
   });
 
+  const [apiStatus, setApiStatus] = useState<"checking" | "connected" | "disconnected">("checking");
+
   const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/projects/${projectId}`);
@@ -58,6 +60,27 @@ export default function ProjectPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Live API connectivity check — pings the public decide endpoint with actual keys
+  const checkApiConnection = useCallback(async () => {
+    if (!project) return;
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const res = await fetch(
+        `${origin}/api/v1/decide?projectId=${project.id}&key=${project.publicKey}`,
+        { cache: "no-store" }
+      );
+      setApiStatus(res.ok ? "connected" : "disconnected");
+    } catch {
+      setApiStatus("disconnected");
+    }
+  }, [project]);
+
+  useEffect(() => {
+    checkApiConnection();
+    const interval = setInterval(checkApiConnection, 30000);
+    return () => clearInterval(interval);
+  }, [checkApiConnection]);
 
   async function handleModeChange(newMode: ModeValue) {
     setMode(newMode);
@@ -144,9 +167,30 @@ export default function ProjectPage() {
             </button>
             <div className="h-6 w-px bg-stone-200" />
             <div>
-              <h1 className="text-lg font-semibold text-stone-900">
-                {project.name}
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg font-semibold text-stone-900">
+                  {project.name}
+                </h1>
+                {apiStatus === "checking" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-[10px] font-medium text-stone-500">
+                    <span className="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse" />
+                    Checking
+                  </span>
+                ) : apiStatus === "connected" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    Connected
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-medium text-red-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    Disconnected
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-stone-400 font-mono">{project.id}</p>
             </div>
           </div>

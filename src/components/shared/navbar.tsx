@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/shared/logo";
-import { LogOut, BookOpen, Wifi, WifiOff } from "lucide-react";
+import { LogOut, BookOpen } from "lucide-react";
 
 export function Navbar() {
   const router = useRouter();
@@ -13,20 +13,7 @@ export function Navbar() {
   const isDocsPage = pathname === "/docs";
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -104,25 +91,6 @@ export function Navbar() {
                     <p className="text-xs text-stone-400 truncate">
                       {user.email}
                     </p>
-                  </div>
-
-                  {/* Connection status */}
-                  <div className="px-4 py-2.5 border-b border-stone-100">
-                    <div className="flex items-center gap-2.5">
-                      {isOnline ? (
-                        <Wifi size={14} className="text-emerald-500" />
-                      ) : (
-                        <WifiOff size={14} className="text-red-400" />
-                      )}
-                      <div>
-                        <p className="text-xs font-medium text-stone-700">
-                          Connection Status
-                        </p>
-                        <p className={`text-[11px] font-medium ${isOnline ? "text-emerald-600" : "text-red-500"}`}>
-                          {isOnline ? "Online" : "Offline"}
-                        </p>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Logout */}
