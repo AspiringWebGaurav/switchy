@@ -29,6 +29,19 @@ export async function verifySession(): Promise<User | null> {
   }
 }
 
+export async function revokeSession(): Promise<void> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (!sessionCookie) return;
+
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, false);
+    await adminAuth.revokeRefreshTokens(decoded.uid);
+  } catch {
+    // Best-effort — cookie already invalid or user doesn't exist; proceed
+  }
+}
+
 export async function upsertUser(decoded: {
   uid: string;
   name?: string;

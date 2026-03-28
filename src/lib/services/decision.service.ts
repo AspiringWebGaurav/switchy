@@ -20,9 +20,21 @@ export async function getDecision(
   // Block if manually disconnected
   if (project.enabled === false) return null;
 
-  // Auto-connect on first valid request (enabled is undefined for new projects)
+  // Not yet activated — write detected:true on first ever call, then return pending response
   if (project.enabled === undefined) {
-    await updateProject(projectId, { enabled: true });
+    if (!project.detected) {
+      await updateProject(projectId, { detected: true });
+    }
+    const pending: DecisionResponse = {
+      mode: "live",
+      message: null,
+      buttonText: null,
+      redirect: null,
+      timestamp: Date.now(),
+      pending: true,
+    };
+    await redisSet(cacheKey, pending, CACHE_TTL);
+    return pending;
   }
 
   // Get mode policy

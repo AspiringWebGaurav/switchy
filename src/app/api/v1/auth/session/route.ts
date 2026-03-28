@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
-import { createSessionCookie, upsertUser } from "@/lib/services/auth.service";
+import { createSessionCookie, upsertUser, revokeSession } from "@/lib/services/auth.service";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/config/constants";
 import { success, error } from "@/lib/utils/response";
 
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    await revokeSession();
     const response = success({ message: "Logged out" });
     response.cookies.set(SESSION_COOKIE_NAME, "", {
       httpOnly: true,

@@ -67,7 +67,7 @@ export async function getProjectByPublicKey(
 
 export async function updateProject(
   projectId: string,
-  data: Partial<Pick<Project, "name" | "enabled">>
+  data: Partial<Pick<Project, "name" | "enabled" | "detected">>
 ): Promise<void> {
   await projectsRef.doc(projectId).update({
     ...data,

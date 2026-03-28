@@ -10,4 +10,5 @@ export interface DecisionResponse {
   buttonText: string | null;
   redirect: string | null;
   timestamp: number;
+  pending?: boolean;
 }

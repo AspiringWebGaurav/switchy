@@ -120,6 +120,9 @@ export function CreateProjectModal({
                     className="flex-1 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Creating..." : "Create Project"}
+
+
+                    
                   </button>
                 </div>
               </form>

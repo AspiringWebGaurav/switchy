@@ -7,6 +7,7 @@ export const RATE_LIMIT_MAX = 60;
 export const RATE_LIMIT_WINDOW = 60; // seconds
 
 export const CACHE_TTL = 30; // seconds
+export const BLOCKED_CACHE_TTL = 5; // seconds — brief cache for paused projects to reduce Firestore reads
 
 export const PUBLIC_KEY_PREFIX = "pk_";
 export const PUBLIC_KEY_BYTES = 12; // generates 24 hex chars

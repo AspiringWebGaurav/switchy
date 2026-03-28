@@ -1,4 +1,26 @@
-export type ModeValue = "live" | "maintenance" | "custom";
+export type ModeValue =
+  | "live"
+  | "maintenance"
+  | "custom"
+  | "preview"
+  | "medical"
+  | "brb"
+  | "vacation"
+  | "focus"
+  | "working"
+  | "launching"
+  | "migrating"
+  | "deploying"
+  | "incident"
+  | "degraded"
+  | "outage"
+  | "closed"
+  | "coming-soon"
+  | "paused"
+  | "moved"
+  | "beta"
+  | "holiday"
+  | "offline";
 
 export interface ModeConfig {
   message: string | null;

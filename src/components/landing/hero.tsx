@@ -1,10 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Zap, Shield, Globe } from "lucide-react";
+import { ArrowRight, Zap, Shield, Globe, LayoutDashboard } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { useLoginModal } from "@/hooks/use-login-modal";
 
 export function LandingHero() {
+  const router = useRouter();
+  const { user } = useAuth();
   const { openLogin } = useLoginModal();
 
   return (
@@ -39,16 +43,30 @@ export function LandingHero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mt-10"
           >
-            <button
-              onClick={openLogin}
-              className="glow-border-filled group inline-flex items-center gap-2 rounded-full bg-indigo-500 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-500/25"
-            >
-              Get Started
-              <ArrowRight
-                size={16}
-                className="transition-transform group-hover:translate-x-0.5"
-              />
-            </button>
+            {user ? (
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="glow-border-filled group inline-flex items-center gap-2 rounded-full bg-indigo-500 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-500/25"
+              >
+                <LayoutDashboard size={16} />
+                Go to Dashboard
+                <ArrowRight
+                  size={16}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </button>
+            ) : (
+              <button
+                onClick={openLogin}
+                className="glow-border-filled group inline-flex items-center gap-2 rounded-full bg-indigo-500 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-500/25"
+              >
+                Get Started
+                <ArrowRight
+                  size={16}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </button>
+            )}
           </motion.div>
         </motion.div>
 
