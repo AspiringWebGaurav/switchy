@@ -158,7 +158,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-zinc-50 overflow-hidden">
+      <main className="flex-1 flex flex-col bg-zinc-50 overflow-y-auto">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <InlineLoader text="Loading..." />
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${selectedProjectId}-${activeTab}`}
