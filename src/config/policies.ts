@@ -8,6 +8,7 @@ export const DEFAULT_MODE_POLICY: ModePolicy = {
     buttonText: null,
     redirectUrl: null,
   },
+  customConfig: null,
   updatedAt: Date.now(),
   updatedBy: "",
 };

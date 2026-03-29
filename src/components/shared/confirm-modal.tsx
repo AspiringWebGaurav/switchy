@@ -1,12 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, Key } from "lucide-react";
 
 interface ConfirmModalProps {
   open: boolean;
   title: string;
   message: string;
+  warning?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "danger" | "default";
@@ -19,6 +20,7 @@ export function ConfirmModal({
   open,
   title,
   message,
+  warning,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   variant = "default",
@@ -76,7 +78,26 @@ export function ConfirmModal({
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-3">
+              {warning && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-4 flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200"
+                >
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    <Key size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                  </motion.div>
+                  <p className="text-sm text-amber-700 font-medium leading-relaxed">
+                    {warning}
+                  </p>
+                </motion.div>
+              )}
+
+              <div className="mt-5 flex gap-3">
                 <button
                   onClick={onCancel}
                   disabled={loading}

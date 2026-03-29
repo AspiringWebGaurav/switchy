@@ -1,25 +1,115 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM TOKENS
+   Based on: Claude Console / Vercel / Stripe aesthetics
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
+  /* ─── Base Colors (Zinc palette) ─── */
+  --background: #fafafa;
+  --background-secondary: #f4f4f5;
+  --foreground: #18181b;
+  --foreground-secondary: #3f3f46;
+  --foreground-muted: #71717a;
+  --foreground-subtle: #a1a1aa;
+  
+  /* ─── Accent (Modern Indigo) ─── */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
   --accent-light: #eef2ff;
-  --muted: #78716c;
-  --border: #e7e5e4;
+  --accent-muted: #c7d2fe;
+  
+  /* ─── Surface & Borders ─── */
   --card: #ffffff;
+  --card-hover: #fafafa;
+  --border: #e4e4e7;
+  --border-hover: #d4d4d8;
+  --border-subtle: #f4f4f5;
+  
+  /* ─── Status Colors ─── */
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --success-border: #a7f3d0;
+  
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --warning-border: #fde68a;
+  
+  --error: #ef4444;
+  --error-light: #fef2f2;
+  --error-border: #fecaca;
+  
+  --info: #3b82f6;
+  --info-light: #eff6ff;
+  --info-border: #bfdbfe;
+  
+  /* ─── Shadows ─── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+  
+  /* ─── Spacing Scale (4px base) ─── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  
+  /* ─── Border Radius ─── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+  
+  /* ─── Typography ─── */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  
+  /* ─── Transitions ─── */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 200ms ease;
+  --transition-slower: 300ms ease;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
-  --color-muted: var(--muted);
+  --color-accent-muted: var(--accent-muted);
   --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-border-subtle: var(--border-subtle);
   --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -105,4 +195,90 @@ body {
   mask-composite: exclude;
   animation: glow-spin 3s linear infinite;
   z-index: -1;
+}
+
+/* Shimmer animation for text */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Gradient text animation */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Text glow effect */
+.text-glow {
+  text-shadow: 0 0 20px rgba(99, 102, 241, 0.5),
+               0 0 40px rgba(139, 92, 246, 0.3),
+               0 0 60px rgba(99, 102, 241, 0.2);
+}
+
+/* Infinite marquee animation - optimized */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* ─── Custom Scrollbar (subtle, modern) ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }

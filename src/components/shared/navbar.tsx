@@ -38,11 +38,11 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-stone-100">
+    <header className="sticky top-0 z-50 bg-transparent">
       <div className="flex h-14 items-center justify-between px-6 lg:px-10">
-        {/* Left — Logo */}
+        {/* Left — Logo (always goes to homepage) */}
         <button
-          onClick={() => router.push(user ? "/dashboard" : "/")}
+          onClick={() => router.push("/")}
           className="cursor-pointer"
         >
           <Logo size="md" />

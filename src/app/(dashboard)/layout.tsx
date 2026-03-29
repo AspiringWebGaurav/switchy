@@ -15,7 +15,9 @@ export default async function DashboardLayout({
 
   return (
     <DeviceGate>
-      <main className="flex-1 bg-stone-50">{children}</main>
+      <div className="flex flex-1 overflow-hidden">
+        {children}
+      </div>
     </DeviceGate>
   );
 }

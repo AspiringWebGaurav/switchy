@@ -41,10 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     const res = withCors(success(decision));
-    res.headers.set(
-      "Cache-Control",
-      "public, s-maxage=30, stale-while-revalidate=60"
-    );
+    res.headers.set("Cache-Control", "no-store");
     res.headers.set(
       "X-RateLimit-Remaining",
       rateLimit.remaining.toString()

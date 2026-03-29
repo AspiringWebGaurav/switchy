@@ -86,7 +86,6 @@ export function LoginModal() {
         closeLogin();
         return;
       }
-      console.error("Login failed:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);

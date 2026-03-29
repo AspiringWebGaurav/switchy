@@ -112,7 +112,36 @@ See `.env.example` for the full list:
 | `NEXT_PUBLIC_FIREBASE_*` | Firebase Client SDK config |
 | `FIREBASE_*` | Firebase Admin SDK (server-only) |
 | `UPSTASH_REDIS_*` | Upstash Redis REST credentials |
-| `NEXT_PUBLIC_APP_URL` | Your app's base URL |
+| `NEXT_PUBLIC_APP_URL` | Your app's base URL (use production domain in production) |
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import the repository in [Vercel](https://vercel.com)
+3. Add all environment variables from `.env.example`
+4. Set `NEXT_PUBLIC_APP_URL` to your production domain
+5. Deploy
+
+### Other Platforms
+
+```bash
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+Ensure all environment variables are set in your hosting platform.
+
+## Development vs Production
+
+| Environment | `NEXT_PUBLIC_APP_URL` |
+|-------------|----------------------|
+| Development | `http://localhost:3000` |
+| Production | `https://your-domain.com` |
 
 ## License
 

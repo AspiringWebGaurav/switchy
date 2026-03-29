@@ -4,6 +4,7 @@ import { ReactNode, useState, useCallback, useMemo } from "react";
 import { AuthContext } from "@/hooks/use-auth";
 import { LoginModalContext } from "@/hooks/use-login-modal";
 import { LoginModal } from "@/components/shared/login-modal";
+import { LoadingProvider } from "@/components/shared/loading-provider";
 import type { User } from "@/types/user";
 
 interface ProvidersProps {
@@ -24,8 +25,10 @@ export function Providers({ children, user }: ProvidersProps) {
   return (
     <AuthContext.Provider value={{ user }}>
       <LoginModalContext.Provider value={loginModalValue}>
-        {children}
-        <LoginModal />
+        <LoadingProvider>
+          {children}
+          <LoginModal />
+        </LoadingProvider>
       </LoginModalContext.Provider>
     </AuthContext.Provider>
   );

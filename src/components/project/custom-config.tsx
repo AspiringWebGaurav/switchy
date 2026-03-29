@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { ModeConfig } from "@/types/policy";
 
 interface CustomConfigProps {
@@ -8,7 +9,52 @@ interface CustomConfigProps {
   disabled?: boolean;
 }
 
+function normalizeUrl(raw: string): { href: string | null; error: string | null } {
+  if (!raw) return { href: null, error: null };
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : "https://" + raw;
+  try {
+    const url = new URL(withScheme);
+    if (!url.hostname.includes(".")) return { href: null, error: "Enter a valid URL (e.g. https://example.com)" };
+    return { href: url.href, error: null };
+  } catch {
+    return { href: null, error: "Enter a valid URL (e.g. https://example.com)" };
+  }
+}
+
 export function CustomConfig({ config, onChange, disabled }: CustomConfigProps) {
+  const [urlInput, setUrlInput] = useState(config.redirectUrl || "");
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUrlInput(config.redirectUrl || "");
+    setUrlError(null);
+  }, [config.redirectUrl]);
+
+  function handleUrlChange(raw: string) {
+    setUrlInput(raw);
+    setUrlError(null);
+    if (!raw) {
+      onChange({ ...config, redirectUrl: null });
+    }
+  }
+
+  function handleUrlBlur() {
+    if (!urlInput) {
+      onChange({ ...config, redirectUrl: null });
+      setUrlError(null);
+      return;
+    }
+    const { href, error } = normalizeUrl(urlInput);
+    if (href) {
+      setUrlInput(href);
+      setUrlError(null);
+      onChange({ ...config, redirectUrl: href });
+    } else {
+      setUrlError(error);
+      onChange({ ...config, redirectUrl: null });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -53,15 +99,21 @@ export function CustomConfig({ config, onChange, disabled }: CustomConfigProps) 
             <span className="text-stone-400 font-normal ml-1">(optional)</span>
           </label>
           <input
-            type="url"
-            value={config.redirectUrl || ""}
-            onChange={(e) =>
-              onChange({ ...config, redirectUrl: e.target.value || null })
-            }
+            type="text"
+            value={urlInput}
+            onChange={(e) => handleUrlChange(e.target.value)}
+            onBlur={handleUrlBlur}
             disabled={disabled}
-            placeholder="https://..."
-            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100 disabled:opacity-50"
+            placeholder="https://example.com"
+            className={`w-full rounded-xl border bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:bg-white focus:ring-2 disabled:opacity-50 ${
+              urlError
+                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                : "border-stone-200 focus:border-indigo-300 focus:ring-indigo-100"
+            }`}
           />
+          {urlError && (
+            <p className="mt-1 text-xs text-red-500">{urlError}</p>
+          )}
         </div>
       </div>
     </div>

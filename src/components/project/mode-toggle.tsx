@@ -448,23 +448,35 @@ function ModeCard({
     <motion.button
       onClick={() => onChange(mode.value)}
       disabled={disabled}
-      whileTap={{ scale: 0.96 }}
+      whileHover={{ scale: 1.02, y: -1 }}
+      whileTap={{ scale: 0.97 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
       title={mode.description}
-      className={`relative flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-center transition-all ${
+      className={`group relative flex flex-col items-center gap-2 rounded-xl border px-3 py-3.5 text-center transition-all duration-200 ${
         isActive
-          ? `${mode.activeBg} ${mode.activeBorder} ${mode.activeText} shadow-sm`
-          : "border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:bg-stone-50"
-      } disabled:opacity-40 disabled:cursor-not-allowed`}
+          ? `${mode.activeBg} ${mode.activeBorder} ${mode.activeText} shadow-md ring-1 ring-offset-1 ring-${mode.dotColor.replace('bg-', '')}/20`
+          : "border-stone-200/80 bg-white text-stone-500 hover:border-stone-300 hover:bg-gradient-to-b hover:from-stone-50 hover:to-white hover:shadow-sm"
+      } disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100`}
     >
       {isActive && (
         <motion.span
           layoutId="mode-active-dot"
-          className={`absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full ${mode.dotColor}`}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className={`absolute top-2 right-2 h-2 w-2 rounded-full ${mode.dotColor} shadow-sm`}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 25 }}
         />
       )}
-      <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
-      <span className="text-sm font-semibold leading-tight truncate w-full">
+      <div className={`p-2 rounded-lg transition-all duration-200 ${
+        isActive 
+          ? `${mode.activeBg} border border-${mode.dotColor.replace('bg-', '')}/20` 
+          : "bg-stone-100/80 group-hover:bg-stone-100"
+      }`}>
+        <Icon size={18} strokeWidth={isActive ? 2 : 1.5} className="transition-transform group-hover:scale-110" />
+      </div>
+      <span className="text-xs font-semibold leading-tight truncate w-full">
         {mode.label}
       </span>
     </motion.button>
