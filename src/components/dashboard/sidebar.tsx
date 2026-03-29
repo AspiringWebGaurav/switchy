@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -146,12 +145,10 @@ export function DashboardSidebar({
               <div className="px-2 py-2">
                 <div className="flex items-center gap-2.5 mb-2">
                   {user.avatar ? (
-                    <Image
+                    <img
                       src={user.avatar}
                       alt={user.name}
-                      width={28}
-                      height={28}
-                      className="rounded-full shrink-0"
+                      className="h-7 w-7 rounded-full shrink-0 object-cover"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
