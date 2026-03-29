@@ -210,7 +210,7 @@ export default function DocsPage() {
 
             <h3 className="text-base font-semibold text-stone-900 mt-6 mb-2">2. Create a Project</h3>
             <p className="text-stone-600 leading-relaxed mb-4">
-              {`From the dashboard, click `}<strong>New Project</strong>{` and enter a name. Your project is created instantly with a unique public key. The default mode is set to `}<strong>Live</strong>.
+              {`From the dashboard, click `}<strong>New Project</strong>{` and enter a name. Your project is created instantly with a unique public key. The default mode is set to `}<strong>Live</strong>{`.`}
             </p>
 
             <h3 className="text-base font-semibold text-stone-900 mt-6 mb-2">3. Get Your Keys</h3>
@@ -502,7 +502,7 @@ export default function RootLayout({ children }) {
               <div className="rounded-xl border border-stone-200 bg-stone-50 p-5">
                 <h4 className="text-sm font-semibold text-stone-900 mb-1">Launch Countdown</h4>
                 <p className="text-sm text-stone-600">
-                  {`Use `}<strong>Custom</strong>{` mode to show a "Coming Soon" page with a redirect to your waitlist. When you're ready to launch, flip to `}<strong>Live</strong>.
+                  {`Use `}<strong>Custom</strong>{` mode to show a "Coming Soon" page with a redirect to your waitlist. When you're ready to launch, flip to `}<strong>Live</strong>{`.`}
                 </p>
               </div>
 
