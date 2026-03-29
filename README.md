@@ -1,148 +1,60 @@
 # Switchyy
 
-Real-time mode control for your websites and applications. Switch between live, maintenance, and custom modes instantly — no code changes, no redeployments.
+Real-time mode control for websites and applications. Switch between live, maintenance, and custom modes instantly — no code changes, no redeployments.
 
-## What is Switchyy?
+## About
 
-Switchyy is a SaaS platform that gives you a remote control for your app's behavior. Create a project, set a mode, and your app checks with Switchyy on every load to know how to behave.
+Switchyy is a SaaS platform that provides remote control for your app's behavior. Create a project, set a mode, and your app checks with Switchyy on every load to know how to behave.
 
-**Key features:**
-- One-click mode switching (Live / Maintenance / Custom)
-- Works with any tech stack — React, Vue, plain HTML, mobile
-- Sub-100ms response time with Redis caching
-- Rate-limited and production-ready
-- Embeddable script or direct API integration
+### Features
 
-## Tech Stack
+- **One-click mode switching** — Live, Maintenance, Custom, and 20+ preset modes
+- **Universal compatibility** — Works with React, Vue, Next.js, Nuxt, Svelte, Astro, Angular, plain HTML
+- **Real-time updates** — SSE-powered instant mode changes across all connected clients
+- **Sub-100ms response** — Redis-cached decisions for lightning-fast responses
+- **Smart search** — Fuzzy framework matching with Trie-based autocomplete
+- **Beautiful overlays** — Customizable maintenance pages with blur effects
 
-- **Next.js 16** — App Router, Turbopack, React Compiler
-- **Firebase** — Authentication (Google) + Firestore
-- **Upstash Redis** — Rate limiting + decision caching
-- **Tailwind CSS v4** — Styling
-- **Framer Motion** — Animations
-- **Zod** — Validation
+### Supported Modes
 
-## Getting Started
+| Mode | Description |
+|------|-------------|
+| Live | App runs normally (default) |
+| Maintenance | Shows maintenance overlay |
+| Custom | Configurable message, button, redirect |
+| Coming Soon | Pre-launch landing |
+| Beta | Beta access mode |
+| Incident | Service disruption notice |
+| + 15 more | Holiday, Vacation, Deploying, etc. |
 
-```bash
-# 1. Clone and install
-git clone https://github.com/your-username/switchy.git
-cd switchy
-npm install
+### Tech Stack
 
-# 2. Set up environment variables
-cp .env.example .env.local
-# Fill in your Firebase and Upstash Redis credentials
+- Next.js 16 (App Router, Turbopack)
+- Firebase (Auth + Firestore)
+- Upstash Redis
+- Tailwind CSS v4
+- Framer Motion
 
-# 3. Run the dev server
-npm run dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) to get started.
+## ⚠️ Proprietary Software
 
-## Project Structure
+**This repository is for reference only.**
 
-```
-src/
-├── app/              # Pages + API routes (App Router)
-│   ├── api/v1/       # REST API (auth, projects, policy, decide)
-│   ├── docs/         # Documentation page
-│   ├── (auth)/       # Login page
-│   └── (dashboard)/  # Dashboard + project control center
-├── components/       # UI components
-│   ├── shared/       # Navbar, Logo, Providers, Modals
-│   ├── landing/      # Landing page hero
-│   ├── dashboard/    # Project cards, create modal
-│   └── project/      # Mode toggle, custom config, integration panel
-├── lib/              # Core logic
-│   ├── firebase/     # Client + Admin SDK
-│   ├── redis/        # Upstash Redis client
-│   ├── services/     # Auth, Project, Policy, Decision services
-│   ├── validators/   # Zod schemas
-│   └── utils/        # Keys, response helpers, rate limiting
-├── hooks/            # useAuth hook
-├── config/           # Constants + default policies
-└── types/            # TypeScript interfaces
-```
+Unauthorized copying, modification, distribution, or use of this software is strictly prohibited under the terms of the [LICENSE](./LICENSE).
 
-## Modes
+### Prohibited Actions
 
-| Mode | Behavior |
-|------|----------|
-| **Live** | App runs normally. Default for new projects. |
-| **Maintenance** | Shows a maintenance overlay to all visitors. |
-| **Custom** | Configurable message, button text, and redirect URL. |
+- ❌ Cloning or forking for personal/commercial use
+- ❌ Self-hosting or deploying your own instance
+- ❌ Copying code or architecture
+- ❌ Reverse engineering
 
-## Integration
+### Permitted
 
-### Script Tag (Easiest)
+- ✅ Viewing code for educational reference
+- ✅ Using the official hosted service (when available)
 
-Add to your HTML:
+---
 
-```html
-<script src="https://your-domain.com/switchy.js?key=YOUR_KEY&project=YOUR_PROJECT_ID"></script>
-```
-
-### API (Full Control)
-
-```
-GET /api/v1/decide?projectId=YOUR_PROJECT_ID&key=YOUR_KEY
-```
-
-Response:
-
-```json
-{
-  "status": "ok",
-  "data": {
-    "mode": "maintenance",
-    "message": "We're updating things. Back soon!",
-    "buttonText": "Go Home",
-    "redirect": "https://example.com"
-  }
-}
-```
-
-## Environment Variables
-
-See `.env.example` for the full list:
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_FIREBASE_*` | Firebase Client SDK config |
-| `FIREBASE_*` | Firebase Admin SDK (server-only) |
-| `UPSTASH_REDIS_*` | Upstash Redis REST credentials |
-| `NEXT_PUBLIC_APP_URL` | Your app's base URL (use production domain in production) |
-
-## Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Import the repository in [Vercel](https://vercel.com)
-3. Add all environment variables from `.env.example`
-4. Set `NEXT_PUBLIC_APP_URL` to your production domain
-5. Deploy
-
-### Other Platforms
-
-```bash
-# Build for production
-npm run build
-
-# Start production server
-npm start
-```
-
-Ensure all environment variables are set in your hosting platform.
-
-## Development vs Production
-
-| Environment | `NEXT_PUBLIC_APP_URL` |
-|-------------|----------------------|
-| Development | `http://localhost:3000` |
-| Production | `https://your-domain.com` |
-
-## License
-
-This is proprietary software. All rights reserved. See [LICENSE](./LICENSE) for details.
+© 2024-2026 Switchyy. All rights reserved.
