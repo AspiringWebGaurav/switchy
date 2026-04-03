@@ -70,7 +70,14 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
   const [editingTemplate, setEditingTemplate] = useState<LayoutTemplate | null>(null);
   const [customTemplates, setCustomTemplates] = useState<LayoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(project.activeTemplateId || null);
+  const [activating, setActivating] = useState<string | null>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
+
+  // Sync activeTemplateId with project prop
+  useEffect(() => {
+    setActiveTemplateId(project.activeTemplateId || null);
+  }, [project.activeTemplateId]);
 
   // Load custom templates
   useEffect(() => {
@@ -78,7 +85,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
       try {
         const res = await fetch(`/api/v1/projects/${project.id}/templates`);
         if (res.ok) {
-          const data = await res.json();
+          const { data } = await res.json();
           setCustomTemplates(data.templates || []);
         }
       } catch {
@@ -145,7 +152,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
         body: JSON.stringify(template),
       });
       if (res.ok) {
-        const data = await res.json();
+        const { data } = await res.json();
         if (method === "POST") {
           setCustomTemplates([...customTemplates, data.template]);
         } else {
@@ -179,30 +186,42 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
   }
 
   async function handleActivateTemplate(templateId: string) {
+    setActivating(templateId);
+    // Optimistic update
+    setActiveTemplateId(templateId);
     try {
       const res = await fetch(`/api/v1/projects/${project.id}/templates/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId }),
       });
-      if (res.ok) {
-        onRefresh(); // Refresh project to get updated activeTemplateId
+      if (!res.ok) {
+        // Revert on error
+        setActiveTemplateId(project.activeTemplateId || null);
       }
     } catch {
-      // Handle error
+      // Revert on error
+      setActiveTemplateId(project.activeTemplateId || null);
+    } finally {
+      setActivating(null);
     }
   }
 
   async function handleDeactivateTemplate() {
+    const previousId = activeTemplateId;
+    // Optimistic update
+    setActiveTemplateId(null);
     try {
       const res = await fetch(`/api/v1/projects/${project.id}/templates/activate`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        onRefresh(); // Refresh project to get updated state
+      if (!res.ok) {
+        // Revert on error
+        setActiveTemplateId(previousId);
       }
     } catch {
-      // Handle error
+      // Revert on error
+      setActiveTemplateId(previousId);
     }
   }
 
@@ -397,7 +416,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                 title={template.name}
               />
               
-              {/* Hover Actions */}
+              {/* Hover Actions - Center */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={(e) => {
@@ -406,21 +425,22 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                     setIsFullscreen(true);
                   }}
                   className="p-2 rounded-lg bg-white/90 hover:bg-white text-stone-700 transition-colors"
+                  title="Preview fullscreen"
                 >
                   <Maximize2 size={18} />
                 </button>
                 {template.type === "custom" && (
                   <>
-                    {project.activeTemplateId === template.id ? (
+                    {activeTemplateId === template.id ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeactivateTemplate();
                         }}
-                        className="p-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
+                        className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
                         title="Deactivate template"
                       >
-                        <Power size={18} />
+                        <X size={18} />
                       </button>
                     ) : (
                       <button
@@ -428,7 +448,8 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                           e.stopPropagation();
                           handleActivateTemplate(template.id);
                         }}
-                        className="p-2 rounded-lg bg-white/90 hover:bg-indigo-500 hover:text-white text-indigo-600 transition-colors"
+                        disabled={activating === template.id}
+                        className="p-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-50"
                         title="Activate template"
                       >
                         <Zap size={18} />
@@ -440,6 +461,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                         openEditor(template);
                       }}
                       className="p-2 rounded-lg bg-white/90 hover:bg-white text-stone-700 transition-colors"
+                      title="Edit template"
                     >
                       <Edit3 size={18} />
                     </button>
@@ -449,6 +471,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                         handleDeleteTemplate(template.id);
                       }}
                       className="p-2 rounded-lg bg-white/90 hover:bg-white text-red-600 transition-colors"
+                      title="Delete template"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -456,7 +479,7 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                 )}
               </div>
 
-              {/* Badge */}
+              {/* Badge - Top Left */}
               {template.type === "builtin" && (
                 <div className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-medium text-stone-600">
                   Built-in
@@ -467,11 +490,35 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
                   <div className="px-2 py-0.5 bg-indigo-500/90 backdrop-blur-sm rounded-full text-[10px] font-medium text-white">
                     Custom
                   </div>
-                  {project.activeTemplateId === template.id && (
+                  {activeTemplateId === template.id && (
                     <div className="px-2 py-0.5 bg-emerald-500/90 backdrop-blur-sm rounded-full text-[10px] font-medium text-white flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                       Active
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom Right - Activate/Active Button (always visible for custom) */}
+              {template.type === "custom" && (
+                <div className="absolute bottom-2 right-2">
+                  {activeTemplateId === template.id ? (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-emerald-500 rounded-lg text-[10px] font-medium text-white">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      Active
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleActivateTemplate(template.id);
+                      }}
+                      disabled={activating === template.id}
+                      className="flex items-center gap-1 px-2 py-1 bg-white/90 hover:bg-emerald-500 hover:text-white rounded-lg text-[10px] font-medium text-emerald-600 transition-colors disabled:opacity-50 shadow-sm"
+                    >
+                      <Zap size={12} />
+                      {activating === template.id ? "Activating..." : "Activate"}
+                    </button>
                   )}
                 </div>
               )}

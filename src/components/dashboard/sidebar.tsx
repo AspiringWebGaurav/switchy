@@ -52,7 +52,7 @@ export function DashboardSidebar({
       initial={false}
       animate={{ width: collapsed ? 56 : 220 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="hidden md:flex flex-col h-[calc(100vh-56px)] bg-white border-r border-zinc-100 sticky top-14 shadow-sm"
+      className="hidden md:flex flex-col h-[calc(100vh-3.5rem)] bg-white border-r border-zinc-100 shadow-sm"
     >
       {/* Collapse toggle */}
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-end"} px-3 py-2`}>

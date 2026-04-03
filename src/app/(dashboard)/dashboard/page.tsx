@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check, Palette } from "lucide-react";
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal";
@@ -84,15 +85,55 @@ function TypewriterStatus() {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [projects, setProjects] = useState<ProjectWithMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Read initial state from URL params
+  const urlProjectId = searchParams.get("project");
+  const urlTab = searchParams.get("tab") as TabId | null;
+  const validTabs: TabId[] = ["overview", "keys", "modes", "templates", "events"];
+
+  // Derive selected project and active tab from URL or defaults
+  const selectedProjectId = useMemo(() => {
+    if (urlProjectId && projects.some(p => p.id === urlProjectId)) {
+      return urlProjectId;
+    }
+    return projects.length > 0 ? projects[0].id : null;
+  }, [urlProjectId, projects]);
+
+  const activeTab = useMemo(() => {
+    return urlTab && validTabs.includes(urlTab) ? urlTab : "overview";
+  }, [urlTab]);
+
   const selectedProject = projects.find((p) => p.id === selectedProjectId) || null;
+
+  // Update URL helper - uses replace to avoid history clutter
+  const updateUrl = useCallback((projectId: string | null, tab: TabId) => {
+    const params = new URLSearchParams();
+    if (projectId) params.set("project", projectId);
+    if (tab !== "overview") params.set("tab", tab);
+    const queryString = params.toString();
+    router.replace(`/dashboard${queryString ? `?${queryString}` : ""}`, { scroll: false });
+  }, [router]);
+
+  // Sync URL when project changes but isn't in URL yet
+  useEffect(() => {
+    if (selectedProjectId && !loading) {
+      const currentUrlProject = searchParams.get("project");
+      const currentUrlTab = searchParams.get("tab") as TabId | null;
+      const effectiveTab = currentUrlTab && validTabs.includes(currentUrlTab) ? currentUrlTab : "overview";
+      
+      if (currentUrlProject !== selectedProjectId) {
+        updateUrl(selectedProjectId, effectiveTab);
+      }
+    }
+  }, [selectedProjectId, loading, searchParams, updateUrl]);
 
   const handleCopy = (value: string, field: string) => {
     navigator.clipboard.writeText(value);
@@ -108,9 +149,6 @@ export default function DashboardPage() {
         const json = await res.json();
         const data = json.data || [];
         setProjects(data);
-        if (data.length > 0 && !selectedProjectId) {
-          setSelectedProjectId(data[0].id);
-        }
       } else {
         setError("Failed to load projects");
       }
@@ -119,7 +157,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedProjectId]);
+  }, []);
 
   useEffect(() => {
     fetchProjects();
@@ -140,8 +178,11 @@ export default function DashboardPage() {
   }, [selectedProject, fetchProjects]);
 
   const handleSelectProject = (id: string) => {
-    setSelectedProjectId(id);
-    setActiveTab("overview");
+    updateUrl(id, "overview");
+  };
+
+  const handleTabChange = (tab: TabId) => {
+    updateUrl(selectedProjectId, tab);
   };
 
   const handleProjectCreated = () => {
@@ -160,7 +201,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-zinc-50 min-h-screen">
+      <main className="flex-1 flex flex-col bg-zinc-50 h-[calc(100vh-3.5rem)] overflow-hidden">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <InlineLoader text="Loading..." />
@@ -204,7 +245,7 @@ export default function DashboardPage() {
         ) : selectedProject ? (
           <>
             {/* Project Header + Tabs */}
-            <div className="border-b border-zinc-200 bg-white/95 backdrop-blur-md shrink-0 sticky top-14 z-40">
+            <div className="border-b border-zinc-200 bg-white shrink-0 z-10">
               <div className="px-6 lg:px-8 py-4">
                 <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
                   <div className="flex items-center gap-2">
@@ -241,7 +282,7 @@ export default function DashboardPage() {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => handleTabChange(tab.id)}
                       className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                         isActive ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"
                       }`}
@@ -262,7 +303,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${selectedProjectId}-${activeTab}`}
@@ -276,7 +317,7 @@ export default function DashboardPage() {
                     <ProjectOverview 
                       project={selectedProject} 
                       onRefresh={fetchProjects}
-                      onNavigateToModes={() => setActiveTab("modes")}
+                      onNavigateToModes={() => handleTabChange("modes")}
                     />
                   )}
                   {activeTab === "keys" && (
