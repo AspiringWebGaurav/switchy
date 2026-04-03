@@ -241,17 +241,16 @@ export default function DocsPage() {
 
             <h3 className="text-lg font-semibold text-stone-900 mt-6 mb-3">HTML / React / Vue (Easiest)</h3>
             <p className="text-stone-600 leading-relaxed mb-3">
-              {`Paste this snippet in your `}<code className="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-mono text-stone-700">index.html</code>{` `}<code className="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-mono text-stone-700">&lt;head&gt;</code>{` for zero-flash integration:`}
+              {`Paste this snippet in your `}<code className="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-mono text-stone-700">index.html</code>{` `}<code className="rounded bg-stone-100 px-1.5 py-0.5 text-xs font-mono text-stone-700">&lt;head&gt;</code>{`:`}
             </p>
             <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 mb-2">
               <pre className="text-xs font-mono text-stone-600 whitespace-pre-wrap break-all leading-relaxed">
 {`<!-- Switchyy: Add to <head> -->
-<style id="switchy-hide">html{visibility:hidden!important;background:#fff}</style>
 <script src="https://your-domain.com/switchy.js?key=YOUR_KEY&project=YOUR_ID"></script>`}
               </pre>
             </div>
             <p className="text-sm text-stone-500 mb-6">
-              {`Works for plain HTML, React (CRA/Vite), Vue, Angular, Svelte. The inline style hides content instantly while the script loads.`}
+              {`Works for plain HTML, React (CRA/Vite), Vue, Angular, Svelte.`}
             </p>
 
             <h3 className="text-base font-semibold text-stone-900 mt-6 mb-3">Next.js</h3>
@@ -266,9 +265,6 @@ export default function RootLayout({ children }) {
   return (
     <html>
       <head>
-        <style id="switchy-hide" dangerouslySetInnerHTML={{
-          __html: "html{visibility:hidden!important;background:#fff}"
-        }} />
         <Script src="https://your-domain.com/switchy.js?key=YOUR_KEY&project=YOUR_ID" strategy="beforeInteractive" />
       </head>
       <body>{children}</body>

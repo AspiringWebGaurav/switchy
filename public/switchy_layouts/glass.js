@@ -3,30 +3,120 @@
 
   var SwitchyLayouts = window.SwitchyLayouts = window.SwitchyLayouts || {};
 
-  // ── Default messages for each mode ────────────────────────────────────────
-  var defaultMessages = {
-    maintenance:  "We're currently performing maintenance.",
-    custom:       "This site is currently unavailable.",
-    preview:      "This site is in preview mode.",
-    medical:      "Away for medical reasons.",
-    brb:          "Be right back!",
-    vacation:     "On vacation — back soon!",
-    focus:        "In focus mode — please don't disturb.",
-    working:      "Currently working on something.",
-    launching:    "Launching soon — stay tuned!",
-    migrating:    "We're migrating to a new platform.",
-    deploying:    "Deployment in progress.",
-    incident:     "We're experiencing an incident.",
-    degraded:     "Some services may be degraded.",
-    outage:       "We're currently experiencing an outage.",
-    closed:       "This site is closed.",
-    "coming-soon":"Coming soon!",
-    paused:       "This site is temporarily paused.",
-    moved:        "We've moved to a new location.",
-    beta:         "This site is in beta.",
-    holiday:      "On holiday — back soon!",
-    offline:      "This site is offline.",
+  // ── Default content for each mode ────────────────────────────────────────
+  var modeContent = {
+    maintenance: {
+      title: "Scheduled Maintenance",
+      subtitle: "We're currently performing maintenance.",
+      description: "Our team is working to improve your experience. We'll be back shortly with enhanced performance and new features."
+    },
+    custom: {
+      title: "Service Unavailable",
+      subtitle: "This site is currently unavailable.",
+      description: "We're working to restore access as quickly as possible. Thank you for your patience."
+    },
+    preview: {
+      title: "Preview Mode",
+      subtitle: "This site is in preview mode.",
+      description: "You're viewing a preview version. Some features may be limited or under development."
+    },
+    medical: {
+      title: "Medical Leave",
+      subtitle: "Away for medical reasons.",
+      description: "We'll return as soon as possible. Thank you for your understanding during this time."
+    },
+    brb: {
+      title: "Be Right Back",
+      subtitle: "Stepping away momentarily.",
+      description: "We'll be back online shortly. This won't take long."
+    },
+    vacation: {
+      title: "On Vacation",
+      subtitle: "Taking a well-deserved break.",
+      description: "We're currently away but will return soon with fresh energy and ideas."
+    },
+    focus: {
+      title: "Focus Mode",
+      subtitle: "Deep work in progress.",
+      description: "We're heads-down working on something important. Notifications are paused."
+    },
+    working: {
+      title: "Work in Progress",
+      subtitle: "Currently working on something.",
+      description: "Active development is underway. Check back soon for updates."
+    },
+    launching: {
+      title: "Launching Soon",
+      subtitle: "Something exciting is coming.",
+      description: "We're putting the finishing touches on something special. Stay tuned for the big reveal."
+    },
+    migrating: {
+      title: "Migration in Progress",
+      subtitle: "We're migrating to a new platform.",
+      description: "Upgrading our infrastructure to serve you better. This may take a few moments."
+    },
+    deploying: {
+      title: "Deployment in Progress",
+      subtitle: "Pushing updates to production.",
+      description: "New features and improvements are being deployed. Service will resume momentarily."
+    },
+    incident: {
+      title: "Incident Detected",
+      subtitle: "We're experiencing an incident.",
+      description: "Our engineering team has been alerted and is actively investigating. We apologize for any inconvenience."
+    },
+    degraded: {
+      title: "Degraded Performance",
+      subtitle: "Some services may be affected.",
+      description: "We're aware of performance issues and are working to resolve them. Core functionality remains available."
+    },
+    outage: {
+      title: "Service Outage",
+      subtitle: "We're currently experiencing an outage.",
+      description: "Our team is working around the clock to restore service. We'll provide updates as they become available."
+    },
+    closed: {
+      title: "Service Closed",
+      subtitle: "This site is closed.",
+      description: "Operations have been suspended. Please check back later for more information."
+    },
+    "coming-soon": {
+      title: "Coming Soon",
+      subtitle: "Something new is on the horizon.",
+      description: "We're building something amazing. Subscribe to be notified when we launch."
+    },
+    paused: {
+      title: "Temporarily Paused",
+      subtitle: "Service is temporarily paused.",
+      description: "Operations are on hold. We'll be back shortly."
+    },
+    moved: {
+      title: "We've Moved",
+      subtitle: "Our location has changed.",
+      description: "We've relocated to a new home. Click below to visit our new address."
+    },
+    beta: {
+      title: "Beta Access",
+      subtitle: "Early access preview.",
+      description: "You're viewing our beta version. Features may change and some bugs are expected."
+    },
+    holiday: {
+      title: "Holiday Break",
+      subtitle: "Celebrating the season.",
+      description: "We're taking time off to recharge. Normal operations will resume soon."
+    },
+    offline: {
+      title: "Offline",
+      subtitle: "This site is offline.",
+      description: "Service is currently unavailable. Please try again later."
+    }
   };
+
+  // Fallback for backward compatibility
+  var defaultMessages = {};
+  Object.keys(modeContent).forEach(function(key) {
+    defaultMessages[key] = modeContent[key].subtitle;
+  });
 
   // ── Mode styles (icon backgrounds & stroke colors) ────────────────────────
   var modeStyles = {
@@ -87,6 +177,19 @@
     "-webkit-backdrop-filter:blur(35px);" +
     "font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
 
+  // Inject keyframe animations
+  function injectAnimations() {
+    if (document.getElementById("switchy-glass-animations")) return;
+    var style = document.createElement("style");
+    style.id = "switchy-glass-animations";
+    style.textContent =
+      "@keyframes switchy-pulse{0%,100%{opacity:1}50%{opacity:0.5}}" +
+      "@keyframes switchy-spin{to{transform:rotate(360deg)}}" +
+      "@keyframes switchy-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}" +
+      "@keyframes switchy-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}";
+    document.head.appendChild(style);
+  }
+
   // ── Helper functions ──────────────────────────────────────────────────────
   function addGlows(el) {
     var g1 = document.createElement("div");
@@ -104,42 +207,123 @@
   function buildBrandingFooter(origin) {
     var footer = document.createElement("div");
     footer.style.cssText =
-      "margin-top:48px;text-align:center;font-size:12px;color:rgba(255,255,255,0.28);letter-spacing:0.01em;";
-    footer.appendChild(document.createTextNode("Powered by\u00a0"));
+      "position:absolute;bottom:32px;left:50%;transform:translateX(-50%);" +
+      "display:flex;align-items:center;gap:8px;" +
+      "font-size:12px;color:rgba(255,255,255,0.35);letter-spacing:0.02em;";
+
+    var dot = document.createElement("span");
+    dot.style.cssText = "width:6px;height:6px;border-radius:50%;background:rgba(34,197,94,0.8);";
+    footer.appendChild(dot);
+
+    footer.appendChild(document.createTextNode("Protected by\u00a0"));
     var a = document.createElement("a");
     a.href = origin;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.textContent = "Switchyy";
     a.style.cssText =
-      "color:rgba(255,255,255,0.42);text-decoration:none;font-weight:600;transition:color 0.18s;";
-    a.onmouseover = function () { this.style.color = "rgba(255,255,255,0.7)"; };
-    a.onmouseout = function () { this.style.color = "rgba(255,255,255,0.42)"; };
+      "color:rgba(255,255,255,0.5);text-decoration:none;font-weight:600;" +
+      "transition:color 0.2s ease;";
+    a.onmouseover = function () { this.style.color = "rgba(255,255,255,0.85)"; };
+    a.onmouseout = function () { this.style.color = "rgba(255,255,255,0.5)"; };
     footer.appendChild(a);
     return footer;
   }
 
-  function buildIcon(bg, strokeColor, svgPath) {
-    var el = document.createElement("div");
-    el.style.cssText =
-      "width:64px;height:64px;margin-bottom:28px;border-radius:50%;" +
+  function buildIcon(bg, strokeColor, svgPath, isAnimated) {
+    var wrapper = document.createElement("div");
+    wrapper.style.cssText =
+      "position:relative;margin-bottom:32px;" +
+      (isAnimated ? "animation:switchy-float 3s ease-in-out infinite;" : "");
+
+    // Outer ring with gradient border
+    var ring = document.createElement("div");
+    ring.style.cssText =
+      "width:88px;height:88px;border-radius:50%;padding:3px;" +
+      "background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.05) 100%);" +
+      "box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.1);";
+
+    var inner = document.createElement("div");
+    inner.style.cssText =
+      "width:100%;height:100%;border-radius:50%;" +
       "display:flex;align-items:center;justify-content:center;" +
-      "background:" + bg + ";";
-    el.innerHTML =
-      '<svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="' +
+      "background:" + bg + ";" +
+      "box-shadow:inset 0 2px 4px rgba(255,255,255,0.2);";
+    inner.innerHTML =
+      '<svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="' +
       strokeColor + '" stroke-width="1.5">' + svgPath + "</svg>";
-    return el;
+
+    ring.appendChild(inner);
+    wrapper.appendChild(ring);
+    return wrapper;
   }
 
   function buildContent() {
     var content = document.createElement("div");
     content.style.cssText =
-      "position:relative;z-index:1;display:flex;flex-direction:column;" +
-      "align-items:center;text-align:center;padding:0 24px;";
+      "position:relative;z-index:1;width:100%;max-width:520px;padding:0 24px;" +
+      "display:flex;flex-direction:column;align-items:center;text-align:center;";
     return content;
   }
 
-  function buildButton(href, text, openInNewTab) {
+  function buildStatusBadge(mode, strokeColor) {
+    var badge = document.createElement("div");
+    badge.style.cssText =
+      "display:inline-flex;align-items:center;gap:8px;margin-bottom:24px;" +
+      "padding:8px 16px;border-radius:999px;" +
+      "background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);" +
+      "font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);" +
+      "text-transform:uppercase;letter-spacing:0.05em;";
+
+    var dot = document.createElement("span");
+    var isActive = ["maintenance","deploying","migrating","working","incident"].indexOf(mode) > -1;
+    dot.style.cssText =
+      "width:8px;height:8px;border-radius:50%;" +
+      "background:" + strokeColor + ";" +
+      (isActive ? "animation:switchy-pulse 2s ease-in-out infinite;" : "");
+    badge.appendChild(dot);
+
+    var text = document.createElement("span");
+    text.textContent = mode.replace(/-/g, " ");
+    badge.appendChild(text);
+
+    return badge;
+  }
+
+  function buildProgressBar(strokeColor) {
+    var container = document.createElement("div");
+    container.style.cssText =
+      "width:100%;max-width:280px;margin-top:32px;";
+
+    var bar = document.createElement("div");
+    bar.style.cssText =
+      "width:100%;height:4px;border-radius:2px;" +
+      "background:rgba(255,255,255,0.1);overflow:hidden;";
+
+    var fill = document.createElement("div");
+    fill.style.cssText =
+      "width:100%;height:100%;border-radius:2px;" +
+      "background:linear-gradient(90deg,transparent," + strokeColor + ",transparent);" +
+      "background-size:200% 100%;" +
+      "animation:switchy-shimmer 2s linear infinite;";
+
+    bar.appendChild(fill);
+    container.appendChild(bar);
+
+    var label = document.createElement("div");
+    label.style.cssText =
+      "margin-top:12px;font-size:12px;color:rgba(255,255,255,0.4);" +
+      "display:flex;align-items:center;justify-content:center;gap:6px;";
+    label.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+      '<span>Working on it...</span>';
+    container.appendChild(label);
+
+    return container;
+  }
+
+  function buildButton(href, text, openInNewTab, strokeColor) {
     var btn = document.createElement("a");
     btn.href = href;
     if (openInNewTab) {
@@ -147,14 +331,51 @@
       btn.rel = "noopener noreferrer";
     }
     btn.textContent = text;
+    var bgColor = strokeColor || "#6366f1";
     btn.style.cssText =
-      "display:inline-block;margin-top:28px;padding:12px 32px;border-radius:999px;" +
+      "display:inline-flex;align-items:center;gap:8px;margin-top:32px;" +
+      "padding:14px 32px;border-radius:12px;" +
       "font-size:14px;font-weight:600;color:#fff;" +
-      "background:rgba(99,102,241,0.6);border:none;" +
-      "text-decoration:none;transition:background 0.2s;";
-    btn.onmouseover = function () { this.style.background = "rgba(99,102,241,0.8)"; };
-    btn.onmouseout = function () { this.style.background = "rgba(99,102,241,0.6)"; };
+      "background:" + bgColor + ";" +
+      "border:none;text-decoration:none;" +
+      "box-shadow:0 4px 14px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.2);" +
+      "transition:all 0.2s ease;transform:translateY(0);";
+    btn.onmouseover = function () {
+      this.style.transform = "translateY(-2px)";
+      this.style.boxShadow = "0 8px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.2)";
+    };
+    btn.onmouseout = function () {
+      this.style.transform = "translateY(0)";
+      this.style.boxShadow = "0 4px 14px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.2)";
+    };
     return btn;
+  }
+
+  function buildFeatureList() {
+    var list = document.createElement("div");
+    list.style.cssText =
+      "display:flex;justify-content:center;gap:24px;margin-top:32px;" +
+      "padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);";
+
+    var features = [
+      { icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", text: "Secure" },
+      { icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", text: "Quick" },
+      { icon: "M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z", text: "Protected" }
+    ];
+
+    features.forEach(function(f) {
+      var item = document.createElement("div");
+      item.style.cssText =
+        "display:flex;flex-direction:column;align-items:center;gap:6px;" +
+        "font-size:11px;color:rgba(255,255,255,0.4);";
+      item.innerHTML =
+        '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:rgba(255,255,255,0.5)">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="' + f.icon + '"/></svg>' +
+        '<span>' + f.text + '</span>';
+      list.appendChild(item);
+    });
+
+    return list;
   }
 
   // ── Glass Layout ──────────────────────────────────────────────────────────
@@ -165,6 +386,8 @@
      * @returns {HTMLElement}
      */
     renderPending: function (ctx) {
+      injectAnimations();
+
       var overlay = document.createElement("div");
       overlay.id = "switchy-overlay";
       overlay.style.cssText = OVERLAY_CSS;
@@ -174,25 +397,42 @@
 
       var lockPath =
         '<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />';
-      content.appendChild(buildIcon("rgba(255,255,255,0.1)", "rgba(255,255,255,0.85)", lockPath));
+      content.appendChild(buildIcon("rgba(99,102,241,0.15)", "#6366f1", lockPath, true));
 
+      // Status badge
+      content.appendChild(buildStatusBadge("pending", "#6366f1"));
+
+      // Title
       var h1 = document.createElement("h1");
       h1.style.cssText =
-        "margin:0 0 12px;font-size:24px;font-weight:600;" +
+        "margin:0 0 12px;font-size:32px;font-weight:700;" +
         "color:rgba(255,255,255,0.95);line-height:1.2;" +
-        "letter-spacing:-0.02em;white-space:nowrap;";
+        "letter-spacing:-0.025em;";
       h1.textContent = "Integration Detected";
-
-      var p = document.createElement("p");
-      p.style.cssText =
-        "margin:0;font-size:15px;color:rgba(255,255,255,0.5);line-height:1.5;white-space:nowrap;";
-      p.textContent = "Your script is running but this project hasn\u2019t been activated yet.";
-
       content.appendChild(h1);
-      content.appendChild(p);
-      content.appendChild(buildButton(ctx.origin + "/dashboard", "Go to Dashboard", true));
-      content.appendChild(buildBrandingFooter(ctx.origin));
+
+      // Subtitle
+      var subtitle = document.createElement("p");
+      subtitle.style.cssText =
+        "margin:0 0 8px;font-size:16px;color:rgba(255,255,255,0.6);line-height:1.5;";
+      subtitle.textContent = "Your Switchyy script is running successfully.";
+      content.appendChild(subtitle);
+
+      // Description
+      var desc = document.createElement("p");
+      desc.style.cssText =
+        "margin:0;max-width:380px;font-size:14px;color:rgba(255,255,255,0.4);line-height:1.6;";
+      desc.textContent = "This project hasn\u2019t been activated yet. Head to your dashboard to configure and enable your status page.";
+      content.appendChild(desc);
+
+      // CTA Button
+      content.appendChild(buildButton(ctx.origin + "/dashboard", "Go to Dashboard", true, "#6366f1"));
+
+      // Feature list
+      content.appendChild(buildFeatureList());
+
       overlay.appendChild(content);
+      overlay.appendChild(buildBrandingFooter(ctx.origin));
 
       return overlay;
     },
@@ -204,8 +444,14 @@
      * @returns {HTMLElement}
      */
     renderMode: function (data, ctx) {
+      injectAnimations();
+
       var ms = modeStyles[data.mode] || modeStyles.custom;
       var svgPath = modeIcons[data.mode] || modeIcons.custom;
+      var mc = modeContent[data.mode] || modeContent.custom;
+
+      // Determine if this is an "active work" mode that should show progress
+      var showProgress = ["maintenance","deploying","migrating","working","incident","degraded","outage"].indexOf(data.mode) > -1;
 
       var overlay = document.createElement("div");
       overlay.id = "switchy-overlay";
@@ -214,22 +460,66 @@
 
       var content = buildContent();
 
-      content.appendChild(buildIcon(ms.bg, ms.stroke, svgPath));
+      // Icon with animation for active modes
+      content.appendChild(buildIcon(ms.bg, ms.stroke, svgPath, showProgress));
 
+      // Status badge
+      content.appendChild(buildStatusBadge(data.mode, ms.stroke));
+
+      // Title - use custom message as title if provided, otherwise use default title
       var h1 = document.createElement("h1");
       h1.style.cssText =
-        "margin:0 0 12px;font-size:26px;font-weight:600;" +
-        "color:rgba(255,255,255,0.95);line-height:1.3;" +
-        "letter-spacing:-0.02em;white-space:nowrap;";
-      h1.textContent = data.message || defaultMessages[data.mode] || "This site is currently unavailable.";
+        "margin:0 0 12px;font-size:32px;font-weight:700;" +
+        "color:rgba(255,255,255,0.95);line-height:1.2;" +
+        "letter-spacing:-0.025em;";
+      h1.textContent = data.title || mc.title;
       content.appendChild(h1);
 
-      if (data.buttonText && data.redirect) {
-        content.appendChild(buildButton(data.redirect, data.buttonText, false));
+      // Subtitle - custom message or default subtitle
+      var subtitle = document.createElement("p");
+      subtitle.style.cssText =
+        "margin:0 0 8px;font-size:16px;color:rgba(255,255,255,0.6);line-height:1.5;";
+      subtitle.textContent = data.message || mc.subtitle;
+      content.appendChild(subtitle);
+
+      // Description
+      var desc = document.createElement("p");
+      desc.style.cssText =
+        "margin:0;max-width:400px;font-size:14px;color:rgba(255,255,255,0.4);line-height:1.7;";
+      desc.textContent = data.description || mc.description;
+      content.appendChild(desc);
+
+      // Progress bar for active modes
+      if (showProgress && !data.buttonText) {
+        content.appendChild(buildProgressBar(ms.stroke));
       }
 
-      content.appendChild(buildBrandingFooter(ctx.origin));
+      // CTA button if provided
+      if (data.buttonText && data.redirect) {
+        content.appendChild(buildButton(data.redirect, data.buttonText, false, ms.stroke));
+      }
+
+      // ETA section if provided
+      if (data.eta) {
+        var eta = document.createElement("div");
+        eta.style.cssText =
+          "margin-top:24px;padding:16px 24px;border-radius:12px;" +
+          "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);" +
+          "font-size:13px;color:rgba(255,255,255,0.5);";
+        eta.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;gap:8px;">' +
+          '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+          '<span>Estimated return: <strong style="color:rgba(255,255,255,0.7)">' + data.eta + '</strong></span>' +
+          '</div>';
+        content.appendChild(eta);
+      }
+
+      // Feature list
+      content.appendChild(buildFeatureList());
+
       overlay.appendChild(content);
+      overlay.appendChild(buildBrandingFooter(ctx.origin));
 
       return overlay;
     }

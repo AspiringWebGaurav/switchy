@@ -5,7 +5,7 @@ import {
   type ServiceAccount,
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const serviceAccount: ServiceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
@@ -20,4 +20,4 @@ const app = getApps().length
 const adminAuth = getAuth(app);
 const adminDb = getFirestore(app);
 
-export { adminAuth, adminDb };
+export { adminAuth, adminDb, FieldValue };

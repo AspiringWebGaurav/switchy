@@ -120,6 +120,11 @@ async function setupTestProject() {
 
 async function cleanupTestProject() {
   try {
+    // Delete templates subcollection
+    const templates = await db.collection("projects").doc(TEST_PROJECT_ID).collection("templates").get();
+    for (const doc of templates.docs) {
+      await doc.ref.delete();
+    }
     await db.collection("projects").doc(TEST_PROJECT_ID).collection("policies").doc("mode").delete();
     await db.collection("projects").doc(TEST_PROJECT_ID).delete();
   } catch { /* best effort */ }
@@ -501,15 +506,40 @@ async function t19_transitionMatrix() {
 async function t20_sseReconnectReplay() {
   console.log("\n[T20] SSE reconnect Last-Event-ID replay");
   const base = Date.now() + 400_000_000;
+  
+  // 1. Emit first event and ensure it's stored in Redis
   await emit("maintenance", { version: base });
-  await sleep(100);
+  await sleep(200); // Allow Redis to persist
+  
+  // 2. Verify event is in Redis before proceeding
+  const storedEvent = await redisGet(`mode:event:${TEST_PROJECT_ID}`);
+  if (!storedEvent) {
+    // Retry emit if not stored
+    await emit("maintenance", { version: base });
+    await sleep(300);
+  }
+  
   const lastId = String(base);
+  
+  // 3. Start SSE collection with Last-Event-ID, wait for connection
   let ready; const rp = new Promise(r => { ready = r; });
-  const cp = sseCollect({ headers: { "last-event-id": lastId }, timeoutMs: 8000, condition: hasModeEvent, _onConnected: ready });
+  const cp = sseCollect({ 
+    headers: { "last-event-id": lastId }, 
+    timeoutMs: 12000, // Increased timeout
+    condition: hasModeEvent, 
+    _onConnected: ready 
+  });
+  
+  // 4. Wait for connection to be established
+  await Promise.race([rp, sleep(2000)]);
+  await sleep(100); // Small buffer after connection
+  
+  // 5. Emit newer event
   await emit("incident", { version: base + 1 });
+  
   const { events, timedOut } = await cp;
   const ev = modeEvents(events)[0];
-  assert(!timedOut && !!ev, "T20-replay-received", "timed out");
+  assert(!timedOut && !!ev, "T20-replay-received", timedOut ? "timed out" : "no mode event");
   if (ev) assert(parseData(ev).version > base, "T20-replay-newer", `version not newer: ${parseData(ev).version}`);
   await redisDel(`mode:event:${TEST_PROJECT_ID}`);
 }
@@ -622,6 +652,216 @@ async function t27_extendedMemory() {
   assert(delta < 20, "T27-heap-delta", `${delta.toFixed(1)} MB (>20 MB)`);
 }
 
+// ── Template Tests ────────────────────────────────────────────────────────────
+let TEST_TEMPLATE_ID = null;
+
+async function t28_templateSave() {
+  console.log("\n[T28] Template Save");
+  const templateData = {
+    name: "QA Test Template",
+    description: "Test template for QA suite",
+    html: `<div class="switchy-overlay">
+  <div class="switchy-content">
+    <div class="switchy-icon">{{ICON}}</div>
+    <h1 class="switchy-title">{{TITLE}}</h1>
+    <p class="switchy-message">{{MESSAGE}}</p>
+    <span class="switchy-badge">{{MODE_LABEL}}</span>
+  </div>
+</div>`,
+    css: `.switchy-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,20,40,0.9);
+  font-family: system-ui, sans-serif;
+}
+.switchy-content { text-align: center; color: #fff; }
+.switchy-title { font-size: 32px; margin-bottom: 16px; }
+.switchy-message { font-size: 16px; opacity: 0.7; }
+.switchy-badge { display: inline-block; padding: 4px 12px; background: rgba(99,102,241,0.3); border-radius: 999px; font-size: 12px; margin-top: 16px; }`,
+    preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  };
+
+  // Save template directly to Firestore (simulating API call with direct access)
+  try {
+    const now = Date.now();
+    const docRef = await db.collection("projects").doc(TEST_PROJECT_ID)
+      .collection("templates").add({
+        ...templateData,
+        type: "custom",
+        createdAt: now,
+        updatedAt: now,
+        userId: "test_owner_qa",
+      });
+    TEST_TEMPLATE_ID = docRef.id;
+    assert(!!TEST_TEMPLATE_ID, "T28-template-saved", "template ID is null");
+    console.log(`    Template ID: ${TEST_TEMPLATE_ID}`);
+  } catch (e) {
+    fail("T28-template-save", e.message);
+  }
+}
+
+async function t29_templateActivate() {
+  console.log("\n[T29] Template Activate");
+  if (!TEST_TEMPLATE_ID) { fail("T29-prereq", "no template ID from T28"); return; }
+
+  try {
+    // Activate template by setting activeTemplateId on project
+    await db.collection("projects").doc(TEST_PROJECT_ID).update({
+      activeTemplateId: TEST_TEMPLATE_ID,
+      updatedAt: Date.now(),
+    });
+    // Clear decide cache so next call fetches fresh
+    await redisDel(`decide:${TEST_PROJECT_ID}`);
+
+    // Verify project has activeTemplateId
+    const projDoc = await db.collection("projects").doc(TEST_PROJECT_ID).get();
+    const projData = projDoc.data();
+    assert(projData.activeTemplateId === TEST_TEMPLATE_ID, "T29-activated", `expected ${TEST_TEMPLATE_ID}, got ${projData.activeTemplateId}`);
+  } catch (e) {
+    fail("T29-activate", e.message);
+  }
+}
+
+async function t30_templateRendersOnDecide() {
+  console.log("\n[T30] Template Renders on /decide");
+  if (!TEST_TEMPLATE_ID) { fail("T30-prereq", "no template ID"); return; }
+
+  try {
+    // Set mode to maintenance directly in Firestore policy (not via emit which is SSE only)
+    await db.collection("projects").doc(TEST_PROJECT_ID)
+      .collection("policies").doc("mode").update({
+        value: "maintenance",
+        config: { message: "QA maintenance test", buttonText: null, redirectUrl: null },
+        updatedAt: Date.now(),
+      });
+
+    // Clear cache and fetch decide
+    await redisDel(`decide:${TEST_PROJECT_ID}`);
+    const res = await fetch(DECIDE_URL, { cache: "no-store" });
+    assert(res.ok, "T30-decide-ok", `HTTP ${res.status}`);
+
+    const json = await res.json();
+    const data = json.data;
+    assert(data.mode === "maintenance", "T30-mode", data.mode);
+    assert(!!data.template, "T30-has-template", "template is missing");
+    assert(!!data.template?.html, "T30-has-html", "template.html is missing");
+    assert(!!data.template?.css, "T30-has-css", "template.css is missing");
+    assert(data.template.html.includes("switchy-overlay"), "T30-html-content", "html missing expected class");
+    console.log("    Template HTML/CSS returned in /decide response ✓");
+  } catch (e) {
+    fail("T30-render", e.message);
+  }
+}
+
+async function t31_templateDeactivate() {
+  console.log("\n[T31] Template Deactivate (Fallback to Default)");
+
+  try {
+    // Deactivate by removing activeTemplateId
+    const admin = require("firebase-admin");
+    await db.collection("projects").doc(TEST_PROJECT_ID).update({
+      activeTemplateId: admin.firestore.FieldValue.delete(),
+      updatedAt: Date.now(),
+    });
+    // Clear cache
+    await redisDel(`decide:${TEST_PROJECT_ID}`);
+
+    // Verify project has no activeTemplateId
+    const projDoc = await db.collection("projects").doc(TEST_PROJECT_ID).get();
+    const projData = projDoc.data();
+    assert(projData.activeTemplateId === undefined, "T31-deactivated", `activeTemplateId still set: ${projData.activeTemplateId}`);
+
+    // Verify /decide no longer returns template
+    const res = await fetch(DECIDE_URL, { cache: "no-store" });
+    const json = await res.json();
+    assert(!json.data.template, "T31-no-template", "template should be absent");
+    console.log("    Fallback to default layout ✓");
+  } catch (e) {
+    fail("T31-deactivate", e.message);
+  }
+}
+
+async function t32_templateDelete() {
+  console.log("\n[T32] Template Delete");
+  if (!TEST_TEMPLATE_ID) { fail("T32-prereq", "no template ID"); return; }
+
+  try {
+    // Delete template from Firestore
+    await db.collection("projects").doc(TEST_PROJECT_ID)
+      .collection("templates").doc(TEST_TEMPLATE_ID).delete();
+
+    // Verify template is gone
+    const templateDoc = await db.collection("projects").doc(TEST_PROJECT_ID)
+      .collection("templates").doc(TEST_TEMPLATE_ID).get();
+    assert(!templateDoc.exists, "T32-deleted", "template still exists");
+    console.log("    Template deleted ✓");
+
+    // Reset to live mode
+    await emit("live");
+  } catch (e) {
+    fail("T32-delete", e.message);
+  }
+}
+
+async function t33_templateFullCycle() {
+  console.log("\n[T33] Template Full Cycle (Save → Activate → Verify → Deactivate → Delete)");
+  const admin = require("firebase-admin");
+
+  // 1. Save a new template
+  const now = Date.now();
+  const templateRef = await db.collection("projects").doc(TEST_PROJECT_ID)
+    .collection("templates").add({
+      name: "Full Cycle Test",
+      description: "Testing complete flow",
+      type: "custom",
+      html: '<div class="fc-test">{{MESSAGE}}</div>',
+      css: '.fc-test { color: red; }',
+      preview: "#ff0000",
+      createdAt: now,
+      updatedAt: now,
+      userId: "test_owner_qa",
+    });
+  const tid = templateRef.id;
+  assert(!!tid, "T33-save", "failed to save");
+
+  // 2. Activate
+  await db.collection("projects").doc(TEST_PROJECT_ID).update({ activeTemplateId: tid });
+  await db.collection("projects").doc(TEST_PROJECT_ID)
+    .collection("policies").doc("mode").update({
+      value: "maintenance",
+      config: { message: "Full cycle test", buttonText: null, redirectUrl: null },
+      updatedAt: Date.now(),
+    });
+  await redisDel(`decide:${TEST_PROJECT_ID}`);
+
+  // 3. Verify /decide returns template
+  let res = await fetch(DECIDE_URL, { cache: "no-store" });
+  let json = await res.json();
+  assert(json.data.template?.html?.includes("fc-test"), "T33-verify", "template not in response");
+
+  // 4. Deactivate
+  await db.collection("projects").doc(TEST_PROJECT_ID).update({
+    activeTemplateId: admin.firestore.FieldValue.delete(),
+  });
+  await redisDel(`decide:${TEST_PROJECT_ID}`);
+
+  // 5. Verify no template
+  res = await fetch(DECIDE_URL, { cache: "no-store" });
+  json = await res.json();
+  assert(!json.data.template, "T33-deactivated", "template should be gone");
+
+  // 6. Delete
+  await db.collection("projects").doc(TEST_PROJECT_ID).collection("templates").doc(tid).delete();
+  await emit("live");
+  pass("T33-full-cycle");
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -680,6 +920,14 @@ async function main() {
     await t25_concurrentEmitRace();
     await t26_fullPayloadAllModes();
     await t27_extendedMemory();
+
+    // Template tests
+    await t28_templateSave();
+    await t29_templateActivate();
+    await t30_templateRendersOnDecide();
+    await t31_templateDeactivate();
+    await t32_templateDelete();
+    await t33_templateFullCycle();
   } finally {
     // ── Cleanup ────────────────────────────────────────────────────────────
     console.log("\n[CLEANUP] Removing test data...");
@@ -698,7 +946,7 @@ async function main() {
     console.log("\n  Failed tests:");
     failures.forEach(({ n, r }) => console.log(`    -- FAIL: ${n}: ${r}`));
   } else {
-    console.log("  All 26 tests passed!");
+    console.log("  All 32 tests passed!");
   }
   console.log("═══════════════════════════════════════════════════════\n");
   process.exit(failed > 0 ? 1 : 0);

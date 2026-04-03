@@ -17,6 +17,71 @@ const frameworks: { id: Framework; label: string; icon: string }[] = [
   { id: "svelte", label: "Svelte", icon: "🔥" },
 ];
 
+function highlightCode(code: string): React.ReactNode[] {
+  const lines = code.split("\n");
+  return lines.map((line, i) => {
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+
+    while (remaining.length > 0) {
+      if (remaining.startsWith("<!--")) {
+        const end = remaining.indexOf("-->");
+        if (end !== -1) {
+          parts.push(<span key={key++} className="text-zinc-500">{remaining.slice(0, end + 3)}</span>);
+          remaining = remaining.slice(end + 3);
+          continue;
+        }
+      }
+      if (remaining.startsWith("//")) {
+        parts.push(<span key={key++} className="text-zinc-500">{remaining}</span>);
+        break;
+      }
+      const strMatch = remaining.match(/^("[^"]*"|'[^']*'|`[^`]*`)/);
+      if (strMatch) {
+        parts.push(<span key={key++} className="text-emerald-400">{strMatch[0]}</span>);
+        remaining = remaining.slice(strMatch[0].length);
+        continue;
+      }
+      const tagMatch = remaining.match(/^(<\/?)([\w]+)/);
+      if (tagMatch) {
+        parts.push(<span key={key++} className="text-zinc-500">{tagMatch[1]}</span>);
+        parts.push(<span key={key++} className="text-rose-400">{tagMatch[2]}</span>);
+        remaining = remaining.slice(tagMatch[0].length);
+        continue;
+      }
+      if (remaining.startsWith("/>") || remaining.startsWith(">")) {
+        const br = remaining.startsWith("/>") ? "/>" : ">";
+        parts.push(<span key={key++} className="text-zinc-500">{br}</span>);
+        remaining = remaining.slice(br.length);
+        continue;
+      }
+      const attrMatch = remaining.match(/^(\s*)([\w]+)(=)/);
+      if (attrMatch) {
+        parts.push(<span key={key++}>{attrMatch[1]}</span>);
+        parts.push(<span key={key++} className="text-violet-400">{attrMatch[2]}</span>);
+        parts.push(<span key={key++} className="text-zinc-500">{attrMatch[3]}</span>);
+        remaining = remaining.slice(attrMatch[0].length);
+        continue;
+      }
+      const kwMatch = remaining.match(/^\b(import|from|export|default|const|function|return)\b/);
+      if (kwMatch) {
+        parts.push(<span key={key++} className="text-purple-400">{kwMatch[0]}</span>);
+        remaining = remaining.slice(kwMatch[0].length);
+        continue;
+      }
+      if ("{}".includes(remaining[0])) {
+        parts.push(<span key={key++} className="text-amber-400">{remaining[0]}</span>);
+        remaining = remaining.slice(1);
+        continue;
+      }
+      parts.push(<span key={key++}>{remaining[0]}</span>);
+      remaining = remaining.slice(1);
+    }
+    return <div key={i}>{parts.length > 0 ? parts : " "}</div>;
+  });
+}
+
 interface IntegrationSnippetProps {
   projectId: string;
   publicKey: string;
@@ -50,38 +115,34 @@ export function IntegrationSnippet({ projectId, publicKey, connectionState }: In
   }, [isHovered]);
 
   const scriptUrl = `${appUrl}/switchy.js?key=${publicKey}&project=${projectId}`;
-  const hideStyle = `<style id="switchy-hide">html{visibility:hidden!important;background:#fff}</style>`;
 
   const snippets: Record<Framework, { code: string; file: string }> = {
     html: {
       file: "index.html",
-      code: `<!-- Switchyy: Add to <head> -->\n${hideStyle}\n<script src="${scriptUrl}"></script>`,
+      code: `<!-- Switchyy: Add to <head> -->\n<script src="${scriptUrl}"></script>`,
     },
     react: {
       file: "public/index.html",
-      code: `<!-- Switchyy: Add to <head> -->\n${hideStyle}\n<script src="${scriptUrl}"></script>`,
+      code: `<!-- Switchyy: Add to <head> -->\n<script src="${scriptUrl}"></script>`,
     },
     nextjs: {
       file: "app/layout.tsx",
       code: `import Script from "next/script";
 
 // In <head>:
-<style id="switchy-hide" dangerouslySetInnerHTML={{
-  __html: "html{visibility:hidden!important;background:#fff}"
-}} />
 <Script src="${scriptUrl}" strategy="beforeInteractive" />`,
     },
     vue: {
       file: "index.html",
-      code: `<!-- Switchyy: Add to <head> -->\n${hideStyle}\n<script src="${scriptUrl}"></script>`,
+      code: `<!-- Switchyy: Add to <head> -->\n<script src="${scriptUrl}"></script>`,
     },
     angular: {
       file: "src/index.html",
-      code: `<!-- Switchyy: Add to <head> -->\n${hideStyle}\n<script src="${scriptUrl}"></script>`,
+      code: `<!-- Switchyy: Add to <head> -->\n<script src="${scriptUrl}"></script>`,
     },
     svelte: {
       file: "app.html",
-      code: `<!-- Switchyy: Add to <head> -->\n${hideStyle}\n<script src="${scriptUrl}"></script>`,
+      code: `<!-- Switchyy: Add to <head> -->\n<script src="${scriptUrl}"></script>`,
     },
   };
 
@@ -168,8 +229,8 @@ export function IntegrationSnippet({ projectId, publicKey, connectionState }: In
             transition={{ duration: 0.15 }}
             className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 pr-16"
           >
-            <pre className="overflow-x-auto text-xs font-mono text-zinc-300 leading-relaxed whitespace-pre-wrap break-all">
-              {currentSnippet.code}
+            <pre className="overflow-x-auto text-xs font-mono text-zinc-300 leading-relaxed">
+              {highlightCode(currentSnippet.code)}
             </pre>
           </motion.div>
         </AnimatePresence>

@@ -1,8 +1,10 @@
 import { getProjectByPublicKey, updateProject } from "@/lib/services/project.service";
 import { getModePolicy } from "@/lib/services/policy.service";
 import { redisGet, redisSet } from "@/lib/redis/client";
+import { adminDb } from "@/lib/firebase/admin";
 import { CACHE_TTL } from "@/config/constants";
 import type { DecisionResponse } from "@/types/api";
+import type { LayoutTemplate } from "@/types/template";
 
 export async function getDecision(
   projectId: string,
@@ -48,6 +50,29 @@ export async function getDecision(
     redirect: policy.config.redirectUrl,
     timestamp: Date.now(),
   };
+
+  // If project has active custom template, fetch and include it
+  if (project.activeTemplateId) {
+    try {
+      const templateDoc = await adminDb
+        .collection("projects")
+        .doc(projectId)
+        .collection("templates")
+        .doc(project.activeTemplateId)
+        .get();
+
+      if (templateDoc.exists) {
+        const templateData = templateDoc.data() as LayoutTemplate;
+        response.template = {
+          html: templateData.html,
+          css: templateData.css,
+        };
+      }
+    } catch (err) {
+      console.error("[Decision] Failed to fetch template:", err);
+      // Continue without template - will use default layout
+    }
+  }
 
   // Cache the response
   await redisSet(cacheKey, response, CACHE_TTL);

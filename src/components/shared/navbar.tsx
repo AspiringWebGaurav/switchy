@@ -37,7 +37,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-transparent">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-stone-200/80">
       <div className="flex h-14 items-center justify-between px-6 lg:px-10">
         {/* Left — Logo (always goes to homepage) */}
         <button

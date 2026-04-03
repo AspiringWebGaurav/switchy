@@ -11,4 +11,8 @@ export interface DecisionResponse {
   redirect: string | null;
   timestamp: number;
   pending?: boolean;
+  template?: {
+    html: string;
+    css: string;
+  };
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check } from "lucide-react";
+import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check, Palette } from "lucide-react";
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal";
 import { InlineLoader } from "@/components/shared/logo-loader";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -10,6 +10,7 @@ import { ProjectOverview } from "@/components/dashboard/tabs/overview";
 import { ProjectKeys } from "@/components/dashboard/tabs/keys";
 import { ProjectModes } from "@/components/dashboard/tabs/modes";
 import { ProjectEvents } from "@/components/dashboard/tabs/events";
+import { ProjectTemplates } from "@/components/dashboard/tabs/templates";
 
 interface ProjectWithMode {
   id: string;
@@ -22,12 +23,13 @@ interface ProjectWithMode {
   detected?: boolean;
 }
 
-type TabId = "overview" | "keys" | "modes" | "events";
+type TabId = "overview" | "keys" | "modes" | "templates" | "events";
 
 const tabs: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "keys", label: "Keys", icon: Key },
   { id: "modes", label: "Modes", icon: Sliders },
+  { id: "templates", label: "Templates", icon: Palette },
   { id: "events", label: "Events", icon: Activity },
 ];
 
@@ -158,7 +160,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-zinc-50 overflow-y-auto">
+      <main className="flex-1 flex flex-col bg-zinc-50 min-h-screen">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <InlineLoader text="Loading..." />
@@ -202,7 +204,7 @@ export default function DashboardPage() {
         ) : selectedProject ? (
           <>
             {/* Project Header + Tabs */}
-            <div className="border-b border-zinc-200 bg-white shrink-0">
+            <div className="border-b border-zinc-200 bg-white/95 backdrop-blur-md shrink-0 sticky top-14 z-40">
               <div className="px-6 lg:px-8 py-4">
                 <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
                   <div className="flex items-center gap-2">
@@ -282,6 +284,9 @@ export default function DashboardPage() {
                   )}
                   {activeTab === "modes" && (
                     <ProjectModes project={selectedProject} onRefresh={fetchProjects} />
+                  )}
+                  {activeTab === "templates" && (
+                    <ProjectTemplates project={selectedProject} onRefresh={fetchProjects} />
                   )}
                   {activeTab === "events" && (
                     <ProjectEvents project={selectedProject} />
