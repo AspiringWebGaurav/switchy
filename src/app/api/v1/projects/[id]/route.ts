@@ -12,6 +12,7 @@ import { getEventBus } from "@/lib/events/bus";
 import { redisSet, redisDel } from "@/lib/redis/client";
 import { EVENT_STORE_TTL } from "@/config/constants";
 import type { ModeEvent } from "@/lib/events/bus";
+import { logAuditEvent } from "@/lib/services/audit.service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -82,6 +83,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         redisSet(`mode:event:${id}`, event, EVENT_STORE_TTL).catch((e) =>
           console.warn(`[Project] Redis SET failed for mode:event:${id}:`, e)
         );
+
+        // Log audit event
+        logAuditEvent({
+          projectId: id,
+          action: "project_enable",
+          userId: user.uid,
+          userEmail: user.email || "",
+        });
       } else if (willBeDisabled) {
         // Disconnected: emit "live" to remove overlay + invalidate cache
         const event: ModeEvent = {
@@ -98,7 +107,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         redisSet(`mode:event:${id}`, event, EVENT_STORE_TTL).catch((e) =>
           console.warn(`[Project] Redis SET failed for mode:event:${id}:`, e)
         );
+
+        // Log audit event
+        logAuditEvent({
+          projectId: id,
+          action: "project_disable",
+          userId: user.uid,
+          userEmail: user.email || "",
+        });
       }
+    } else if (parsed.data.name) {
+      // Log project update (name change, etc.)
+      logAuditEvent({
+        projectId: id,
+        action: "project_update",
+        userId: user.uid,
+        userEmail: user.email || "",
+        metadata: { name: parsed.data.name },
+      });
     }
 
     return success(updated);

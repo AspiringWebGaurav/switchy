@@ -4,6 +4,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { getProjectById } from "@/lib/services/project.service";
 import { success, error } from "@/lib/utils/response";
 import type { LayoutTemplate } from "@/types/template";
+import { logAuditEvent } from "@/lib/services/audit.service";
 
 export async function GET(
   req: NextRequest,
@@ -75,6 +76,15 @@ export async function POST(
       .collection("templates")
       .add(templateData);
 
+    // Log audit event
+    logAuditEvent({
+      projectId: id,
+      action: "template_create",
+      userId: user.uid,
+      userEmail: user.email || "",
+      metadata: { templateId: docRef.id, templateName: name },
+    });
+
     return success({ template: { id: docRef.id, ...templateData } }, 201);
   } catch (err) {
     console.error("[Templates POST]", err);
@@ -125,6 +135,15 @@ export async function PUT(
     };
 
     await templateRef.update(updateData);
+
+    // Log audit event
+    logAuditEvent({
+      projectId: id,
+      action: "template_update",
+      userId: user.uid,
+      userEmail: user.email || "",
+      metadata: { templateId, templateName: name },
+    });
 
     return success({ template: { id: templateId, ...templateDoc.data(), ...updateData } });
   } catch (err) {

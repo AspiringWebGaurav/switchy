@@ -195,7 +195,10 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId }),
       });
-      if (!res.ok) {
+      if (res.ok) {
+        // Refresh project data to sync activeTemplateId
+        onRefresh();
+      } else {
         // Revert on error
         setActiveTemplateId(project.activeTemplateId || null);
       }
@@ -215,7 +218,10 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
       const res = await fetch(`/api/v1/projects/${project.id}/templates/activate`, {
         method: "DELETE",
       });
-      if (!res.ok) {
+      if (res.ok) {
+        // Refresh project data to sync activeTemplateId
+        onRefresh();
+      } else {
         // Revert on error
         setActiveTemplateId(previousId);
       }
@@ -544,18 +550,18 @@ export function ProjectTemplates({ project, onRefresh }: ProjectTemplatesProps) 
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           onClick={(e) => { e.stopPropagation(); openEditor(); }}
-          className="group relative rounded-xl border-2 border-dashed border-stone-200 hover:border-indigo-300 overflow-hidden transition-all aspect-video flex flex-col items-center justify-center gap-3 bg-stone-50 hover:bg-indigo-50/50"
+          className="group relative rounded-xl border border-dashed border-stone-300 hover:border-indigo-400 overflow-hidden transition-all text-left"
         >
-          <div className="w-12 h-12 rounded-full bg-stone-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-            <Plus size={24} className="text-stone-400 group-hover:text-indigo-500" />
+          {/* Preview area - matches template card aspect-video */}
+          <div className="aspect-video flex flex-col items-center justify-center gap-3 bg-stone-50 group-hover:bg-indigo-50/50 transition-colors">
+            <div className="w-12 h-12 rounded-full bg-stone-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+              <Plus size={24} className="text-stone-400 group-hover:text-indigo-500" />
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-stone-600 group-hover:text-indigo-600">
-              Add Custom Template
-            </p>
-            <p className="text-xs text-stone-400 mt-0.5">
-              Paste your own HTML & CSS
-            </p>
+          {/* Footer - matches template card info section */}
+          <div className="p-3 bg-white">
+            <h3 className="font-medium text-stone-900 text-sm group-hover:text-indigo-600 transition-colors">Add Custom Template</h3>
+            <p className="text-xs text-stone-500 mt-0.5">Paste your own HTML & CSS</p>
           </div>
         </motion.button>
       </div>

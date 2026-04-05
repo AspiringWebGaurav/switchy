@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/services/auth.service";
 import { adminDb } from "@/lib/firebase/admin";
 import { getProjectById } from "@/lib/services/project.service";
 import { success, error } from "@/lib/utils/response";
+import { logAuditEvent } from "@/lib/services/audit.service";
 
 export async function DELETE(
   req: NextRequest,
@@ -30,7 +31,17 @@ export async function DELETE(
       return error("Template not found", 404);
     }
 
+    const templateData = templateDoc.data();
     await templateRef.delete();
+
+    // Log audit event
+    logAuditEvent({
+      projectId: id,
+      action: "template_delete",
+      userId: user.uid,
+      userEmail: user.email || "",
+      metadata: { templateId, templateName: templateData?.name },
+    });
 
     return success({ deleted: true });
   } catch (err) {

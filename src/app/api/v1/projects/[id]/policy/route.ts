@@ -4,6 +4,7 @@ import { getProjectById } from "@/lib/services/project.service";
 import { getModePolicy, updateModePolicy } from "@/lib/services/policy.service";
 import { updatePolicySchema } from "@/lib/validators/policy";
 import { success, error } from "@/lib/utils/response";
+import { logAuditEvent } from "@/lib/services/audit.service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,12 +46,29 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return error(parsed.error.issues[0].message, 400);
     }
 
+    // Get current policy for audit log
+    const currentPolicy = await getModePolicy(id);
+    const previousMode = currentPolicy?.value;
+
     const updated = await updateModePolicy(
       id,
       user.uid,
       parsed.data.value,
       parsed.data.config
     );
+
+    // Log audit event (fire-and-forget)
+    logAuditEvent({
+      projectId: id,
+      action: "mode_change",
+      userId: user.uid,
+      userEmail: user.email || "",
+      metadata: {
+        from: previousMode,
+        to: parsed.data.value,
+        config: parsed.data.config,
+      },
+    });
 
     return success(updated);
   } catch (err) {

@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
-import { createSessionCookie, upsertUser, revokeSession } from "@/lib/services/auth.service";
+import { createSessionCookie, upsertUser, revokeSession, verifySession } from "@/lib/services/auth.service";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/config/constants";
 import { success, error } from "@/lib/utils/response";
+import { logAuthEvent } from "@/lib/services/audit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,11 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
+    // Log auth event (fire-and-forget)
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") || undefined;
+    logAuthEvent("login", decoded.uid, decoded.email || "", ip);
+
     return response;
   } catch (err) {
     console.error("[Session] Create failed:", err);
@@ -39,6 +45,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    // Get current user before revoking session
+    const user = await verifySession();
+    
     await revokeSession();
     const response = success({ message: "Logged out" });
     response.cookies.set(SESSION_COOKIE_NAME, "", {
@@ -48,6 +57,12 @@ export async function DELETE() {
       maxAge: 0,
       path: "/",
     });
+
+    // Log auth event (fire-and-forget)
+    if (user) {
+      logAuthEvent("logout", user.uid, user.email || "");
+    }
+
     return response;
   } catch (err) {
     console.error("[Session] Delete failed:", err);
