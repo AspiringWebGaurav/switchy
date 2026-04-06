@@ -8,7 +8,6 @@
   var params = new URL(src, window.location.origin).searchParams;
   var key = params.get("key");
   var projectId = params.get("project");
-  var blocking = params.get("blocking") !== "false";
 
   if (!key || !projectId) {
     console.error("[Switchyy] Missing key or project parameter in script tag.");
@@ -30,112 +29,6 @@
   var inFallback = false;
   var _removeTimer = null;
   var _debugBadge = null;
-  var _initialBlocker = null;
-  var _blockingReady = false;
-
-  // ── Blocking overlay — glass pending state (no spinner) ────────────────────
-  function createBlocker() {
-    var el = document.createElement("div");
-    el.id = "switchy-blocker";
-
-    // Radial glow 1 — top-left indigo
-    var g1 = document.createElement("div");
-    g1.style.cssText =
-      "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" +
-      "background:radial-gradient(ellipse 80% 60% at 15% 20%,rgba(99,102,241,0.15) 0%,transparent 70%);";
-    el.appendChild(g1);
-
-    // Radial glow 2 — bottom-right blue
-    var g2 = document.createElement("div");
-    g2.style.cssText =
-      "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" +
-      "background:radial-gradient(ellipse 70% 50% at 85% 80%,rgba(59,130,246,0.12) 0%,transparent 70%);";
-    el.appendChild(g2);
-
-    // Center content
-    var center = document.createElement("div");
-    center.style.cssText =
-      "position:relative;z-index:1;display:flex;flex-direction:column;" +
-      "align-items:center;gap:0;text-align:center;";
-
-    // Logo
-    var logoWrap = document.createElement("div");
-    logoWrap.style.cssText = "margin-bottom:20px;opacity:0.5;";
-    logoWrap.innerHTML =
-      '<svg width="52" height="52" viewBox="0 0 32 32" fill="none">' +
-      '<defs><linearGradient id="swpg" x1="0%" y1="0%" x2="100%" y2="100%">' +
-      '<stop offset="0%" stop-color="rgba(99,102,241,0.7)"/>' +
-      '<stop offset="100%" stop-color="rgba(139,92,246,0.7)"/>' +
-      '</linearGradient></defs>' +
-      '<rect width="32" height="32" rx="8" fill="url(#swpg)"/>' +
-      '<rect x="7" y="12" width="18" height="8" rx="4" fill="rgba(255,255,255,0.3)"/>' +
-      '<circle cx="21" cy="16" r="3" fill="rgba(255,255,255,0.6)"/>' +
-      '<path d="M14 7L12 13h2l-1.5 6 4-5.5h-2L16 7z" fill="rgba(255,255,255,0.6)"/>' +
-      '</svg>';
-    center.appendChild(logoWrap);
-
-    // Wordmark
-    var wordmark = document.createElement("div");
-    wordmark.style.cssText =
-      "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;" +
-      "font-size:30px;font-weight:700;color:rgba(255,255,255,0.55);" +
-      "letter-spacing:-0.02em;margin-bottom:6px;";
-    wordmark.innerHTML = 'Switchyy<sup style="font-size:0.4em;vertical-align:super;opacity:0.6;">TM</sup>';
-    center.appendChild(wordmark);
-
-    // Tagline
-    var tagline = document.createElement("div");
-    tagline.style.cssText =
-      "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;" +
-      "font-size:11px;font-weight:500;color:rgba(255,255,255,0.25);" +
-      "letter-spacing:0.2em;text-transform:uppercase;margin-bottom:32px;";
-    tagline.textContent = "Enterprise Mode Control";
-    center.appendChild(tagline);
-
-    // Status line
-    var status = document.createElement("div");
-    status.style.cssText =
-      "display:flex;align-items:center;gap:8px;" +
-      "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;" +
-      "font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:0;";
-    var dot = document.createElement("span");
-    dot.id = "sw-pending-dot";
-    status.appendChild(dot);
-    status.appendChild(document.createTextNode("Connecting to control plane\u2026"));
-    center.appendChild(status);
-
-    el.appendChild(center);
-
-    // Copyright — absolute bottom
-    var copy = document.createElement("div");
-    copy.style.cssText =
-      "position:absolute;bottom:28px;left:0;width:100%;text-align:center;" +
-      "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;" +
-      "font-size:11px;color:rgba(255,255,255,0.18);letter-spacing:0.04em;";
-    copy.textContent = "\u00a9 " + new Date().getFullYear() + " Switchyy\u2122. All rights reserved.";
-    el.appendChild(copy);
-
-    return el;
-  }
-
-  function showInitialBlocker() {
-    if (!blocking || _initialBlocker || _blockingReady) return;
-    _initialBlocker = createBlocker();
-    (document.body || document.documentElement).appendChild(_initialBlocker);
-  }
-
-  function removeInitialBlocker() {
-    _blockingReady = true;
-    if (_initialBlocker && _initialBlocker.parentNode) {
-      _initialBlocker.style.opacity = "0";
-      setTimeout(function() {
-        if (_initialBlocker && _initialBlocker.parentNode) {
-          _initialBlocker.parentNode.removeChild(_initialBlocker);
-        }
-        _initialBlocker = null;
-      }, 150);
-    }
-  }
 
   // ── Layout system ─────────────────────────────────────────────────────────
   var layoutCache = {};
@@ -178,15 +71,6 @@
     var s = document.createElement("style");
     s.id = "switchy-styles";
     s.textContent =
-      "#switchy-blocker{position:fixed;inset:0;width:100vw;height:100vh;" +
-      "z-index:2147483646;overflow:hidden;display:flex;" +
-      "align-items:center;justify-content:center;" +
-      "background:rgba(10,20,40,0.35);" +
-      "backdrop-filter:blur(35px);-webkit-backdrop-filter:blur(35px);" +
-      "transition:opacity 0.2s ease-out}" +
-      "#sw-pending-dot{width:6px;height:6px;border-radius:50%;display:inline-block;" +
-      "background:rgba(99,102,241,0.6);animation:sw-dot-pulse 2s ease-in-out infinite}" +
-      "@keyframes sw-dot-pulse{0%,100%{opacity:0.4}50%{opacity:1}}" +
       "#switchy-overlay{transition:opacity 0.3s cubic-bezier(0.16,1,0.3,1)}" +
       "#switchy-debug-badge{position:fixed;bottom:12px;left:12px;z-index:9999999;" +
       "background:rgba(15,15,15,0.88);color:#e2e8f0;" +
@@ -243,18 +127,17 @@
   // ── Context for layouts ───────────────────────────────────────────────────
   var ctx = { origin: origin };
 
-  // ── applyMode — idempotent, version-safe, transition-aware ────────────────
+  // ── applyMode — idempotent, mode-first, server-driven ────────────────────
   function applyMode(data) {
     if (!data) return;
-
-    // Always remove the initial blocker once we have a decision
-    removeInitialBlocker();
 
     var effectiveVersion =
       (typeof data.version === "number" ? data.version : 0) ||
       (typeof data.timestamp === "number" ? data.timestamp : 0);
 
-    if (effectiveVersion > 0 && effectiveVersion <= lastVersion) return;
+    // Mode-first deduplication: always apply if mode changed, else check version
+    var modeChanged = data.mode !== currentMode || data.pending !== (currentMode === "pending");
+    if (!modeChanged && effectiveVersion > 0 && effectiveVersion <= lastVersion) return;
     if (effectiveVersion > lastVersion) lastVersion = effectiveVersion;
 
     cancelPendingFadeOut();
@@ -401,16 +284,16 @@
     });
 
     evtSource.onopen = function () {
-      var wasFailing = sseFailStart !== null || inFallback;
+      // Reset stale state on reconnect — server is source of truth
+      lastVersion = 0;
       sseFailStart = null;
       inFallback = false;
       stopPollingFallback();
-      if (wasFailing) {
-        fetch(decideEndpoint, { cache: "no-store" })
-          .then(function (res) { return res.json(); })
-          .then(function (json) { if (json.data) applyMode(json.data); })
-          .catch(function () { /* silent — next SSE event will correct */ });
-      }
+      // Always re-sync with server on reconnect
+      fetch(decideEndpoint, { cache: "no-store" })
+        .then(function (res) { return res.json(); })
+        .then(function (json) { if (json.data) applyMode(json.data); })
+        .catch(function () { /* silent — next SSE event will correct */ });
     };
 
     evtSource.onerror = function () {
@@ -433,13 +316,11 @@
     }
   });
 
-  // ── Startup — inject styles, show blocker, then fetch decision ─────────────
+  // ── Startup — server-first, zero premature UI ─────────────────────────────
   function init() {
     injectStyles();
-    if (blocking) {
-      showInitialBlocker();
-      setTimeout(removeInitialBlocker, 4000); // Failsafe: 4s max block
-    }
+    // Server-first: fetch decision BEFORE any UI rendering
+    // NO blocker, NO overlay until server confirms mode
     loadLayout(DEFAULT_LAYOUT, function () {
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) {
@@ -449,7 +330,7 @@
         .then(function (json) { if (json.data) applyMode(json.data); })
         .catch(function (err) {
           console.error("[Switchyy]", err.message);
-          removeInitialBlocker(); // Unblock on error
+          // On error: remain neutral, no UI injection
         });
       connectSSE();
     });
