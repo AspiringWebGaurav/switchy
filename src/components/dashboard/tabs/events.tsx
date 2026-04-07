@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
-  Clock,
   Wifi,
   Sliders,
   LogIn,
@@ -18,8 +17,8 @@ import {
   Key,
   Trash2,
   Edit3,
-  RefreshCw,
   ChevronDown,
+  Radio,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { AuditAction, AuditLog } from "@/lib/services/audit.service";
@@ -27,6 +26,7 @@ import type { AuditAction, AuditLog } from "@/lib/services/audit.service";
 interface Project {
   id: string;
   name: string;
+  publicKey: string;
   mode: string;
   enabled?: boolean;
   detected?: boolean;
@@ -34,6 +34,16 @@ interface Project {
 
 interface ProjectEventsProps {
   project: Project;
+}
+
+interface LiveEvent {
+  id: string;
+  action: AuditAction;
+  message: string;
+  userEmail: string;
+  timestamp: number;
+  version: number;
+  isLive?: boolean;
 }
 
 const actionConfig: Record<AuditAction, { icon: typeof Activity; color: string; label: string }> = {
@@ -81,31 +91,16 @@ function formatAbsoluteTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString();
 }
 
-function getActionDescription(log: AuditLog): string {
-  const { action, metadata } = log;
-  
-  switch (action) {
-    case "mode_change":
-      return `${metadata.from || "unknown"} → ${metadata.to || "unknown"}`;
-    case "template_create":
-    case "template_update":
-    case "template_delete":
-    case "template_activate":
-      return metadata.templateName as string || "";
-    case "project_update":
-      if (metadata.name) return `Renamed to "${metadata.name}"`;
-      return "";
-    default:
-      return "";
-  }
-}
-
 export function ProjectEvents({ project }: ProjectEventsProps) {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [events, setEvents] = useState<LiveEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sseConnected, setSseConnected] = useState(false);
+  
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const connectionState = project.enabled === true
     ? "connected"
@@ -131,13 +126,30 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
     }
   }, [project.id]);
 
+  // Initial load of historical events
   useEffect(() => {
     async function loadInitial() {
       setLoading(true);
       setError(null);
       try {
         const data = await fetchLogs();
-        setLogs(data.logs || []);
+        const logs: AuditLog[] = data.logs || [];
+        
+        // Convert AuditLog to LiveEvent format and track seen IDs
+        const initialEvents: LiveEvent[] = logs.map(log => {
+          seenIdsRef.current.add(log.id);
+          return {
+            id: log.id,
+            action: log.action,
+            message: getActionLabel(log.action, log.metadata),
+            userEmail: log.userEmail,
+            timestamp: log.timestamp,
+            version: log.timestamp, // Use timestamp as version for historical events
+            isLive: false,
+          };
+        });
+        
+        setEvents(initialEvents);
         setHasMore(data.hasMore || false);
       } catch {
         setError("Failed to load activity");
@@ -148,33 +160,91 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
     loadInitial();
   }, [fetchLogs]);
 
+  // SSE subscription for real-time events
+  useEffect(() => {
+    if (!project.publicKey || connectionState === "waiting") return;
+
+    const eventsUrl = `/api/v1/events/${project.id}?key=${encodeURIComponent(project.publicKey)}`;
+    const evtSource = new EventSource(eventsUrl);
+    eventSourceRef.current = evtSource;
+
+    evtSource.onopen = () => {
+      setSseConnected(true);
+    };
+
+    evtSource.onerror = () => {
+      setSseConnected(false);
+    };
+
+    evtSource.addEventListener("audit", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as LiveEvent;
+        
+        // Deduplicate by ID
+        if (seenIdsRef.current.has(data.id)) return;
+        seenIdsRef.current.add(data.id);
+        
+        const newEvent: LiveEvent = {
+          ...data,
+          isLive: true,
+        };
+        
+        // Insert in correct position by version (descending)
+        setEvents(prev => {
+          const updated = [...prev];
+          let insertIndex = 0;
+          for (let i = 0; i < updated.length; i++) {
+            if (newEvent.version > updated[i].version) {
+              insertIndex = i;
+              break;
+            }
+            insertIndex = i + 1;
+          }
+          updated.splice(insertIndex, 0, newEvent);
+          return updated;
+        });
+      } catch {
+        // Ignore parse errors
+      }
+    });
+
+    return () => {
+      evtSource.close();
+      eventSourceRef.current = null;
+      setSseConnected(false);
+    };
+  }, [project.id, project.publicKey, connectionState]);
+
   async function loadMore() {
-    if (loadingMore || !hasMore || logs.length === 0) return;
+    if (loadingMore || !hasMore || events.length === 0) return;
     
     setLoadingMore(true);
     try {
-      const lastLog = logs[logs.length - 1];
-      const data = await fetchLogs(lastLog.timestamp);
-      setLogs([...logs, ...(data.logs || [])]);
+      const lastEvent = events[events.length - 1];
+      const data = await fetchLogs(lastEvent.timestamp);
+      const logs: AuditLog[] = data.logs || [];
+      
+      const moreEvents: LiveEvent[] = logs
+        .filter(log => !seenIdsRef.current.has(log.id))
+        .map(log => {
+          seenIdsRef.current.add(log.id);
+          return {
+            id: log.id,
+            action: log.action,
+            message: getActionLabel(log.action, log.metadata),
+            userEmail: log.userEmail,
+            timestamp: log.timestamp,
+            version: log.timestamp,
+            isLive: false,
+          };
+        });
+      
+      setEvents(prev => [...prev, ...moreEvents]);
       setHasMore(data.hasMore || false);
     } catch {
       // Silent fail for load more
     } finally {
       setLoadingMore(false);
-    }
-  }
-
-  async function refresh() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchLogs();
-      setLogs(data.logs || []);
-      setHasMore(data.hasMore || false);
-    } catch {
-      setError("Failed to load activity");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -188,6 +258,40 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
     );
   }
 
+  function getActionLabel(action: AuditAction, metadata?: Record<string, unknown>): string {
+    switch (action) {
+      case "mode_change":
+        const modeTo = metadata?.to as string;
+        return modeTo ? `Mode changed to ${modeTo.charAt(0).toUpperCase() + modeTo.slice(1)}` : "Mode changed";
+      case "template_activate":
+        return `Applied template "${metadata?.templateName || "Untitled"}"`;
+      case "template_create":
+        return `Created template "${metadata?.templateName || "Untitled"}"`;
+      case "template_update":
+        return `Updated template "${metadata?.templateName || "Untitled"}"`;
+      case "template_delete":
+        return `Deleted template "${metadata?.templateName || "Untitled"}"`;
+      case "template_deactivate":
+        return `Deactivated template "${metadata?.templateName || "Untitled"}"`;
+      case "project_enable":
+        return "Project enabled";
+      case "project_disable":
+        return "Project paused";
+      case "project_update":
+        return metadata?.name ? `Renamed to "${metadata.name}"` : "Settings updated";
+      case "login":
+        return "Signed in";
+      case "logout":
+        return "Signed out";
+      case "register":
+        return "Account created";
+      case "api_key_regenerate":
+        return "API key regenerated";
+      default:
+        return actionConfig[action]?.label || action;
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Current Status Card */}
@@ -198,13 +302,16 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-stone-900">Current Status</h3>
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          </button>
+          {/* Live indicator */}
+          {sseConnected && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-xs font-medium text-emerald-700">Live</span>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-2 gap-3">
@@ -219,7 +326,7 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
                 {connectionState === "connected" ? "Connected" : connectionState === "disconnected" ? "Disconnected" : "Detected"}
               </p>
               <p className="text-xs text-stone-500 truncate">
-                {connectionState === "connected" ? "Real-time updates active" : "Updates paused"}
+                {sseConnected ? "Real-time updates active" : "Connecting..."}
               </p>
             </div>
           </div>
@@ -238,19 +345,24 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
         </div>
       </motion.div>
 
-      {/* Activity Timeline */}
+      {/* Activity Feed */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="rounded-xl border border-stone-200 bg-white"
       >
-        <div className="px-5 py-4 border-b border-stone-100">
-          <h3 className="text-sm font-semibold text-stone-900">Activity Log</h3>
-          <p className="text-xs text-stone-500 mt-0.5">All actions performed on this project</p>
+        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-stone-900">Activity Feed</h3>
+            <p className="text-xs text-stone-500 mt-0.5">Live updates from your project</p>
+          </div>
+          {sseConnected && (
+            <Radio size={14} className="text-emerald-500 animate-pulse" />
+          )}
         </div>
 
-        {loading && logs.length === 0 ? (
+        {loading && events.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-6 h-6 mx-auto border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" />
             <p className="text-sm text-stone-500 mt-3">Loading activity...</p>
@@ -258,59 +370,53 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
         ) : error ? (
           <div className="p-8 text-center">
             <p className="text-sm text-red-600">{error}</p>
-            <button
-              onClick={refresh}
-              className="mt-2 text-xs text-stone-500 hover:text-stone-700 underline"
-            >
-              Try again
-            </button>
           </div>
-        ) : logs.length === 0 ? (
+        ) : events.length === 0 ? (
           <div className="p-8 text-center">
             <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-xl bg-stone-100 mb-3">
               <Activity size={20} className="text-stone-400" />
             </div>
             <p className="text-sm text-stone-600">No activity recorded yet</p>
-            <p className="text-xs text-stone-400 mt-1">Actions will appear here as you use the dashboard</p>
+            <p className="text-xs text-stone-400 mt-1">Actions will appear here instantly</p>
           </div>
         ) : (
           <>
             <div className="divide-y divide-stone-100">
-              <AnimatePresence>
-                {logs.map((log, index) => {
-                  const config = actionConfig[log.action] || actionConfig.project_update;
+              <AnimatePresence mode="popLayout">
+                {events.map((event) => {
+                  const config = actionConfig[event.action] || actionConfig.project_update;
                   const colors = colorClasses[config.color] || colorClasses.stone;
                   const Icon = config.icon;
-                  const description = getActionDescription(log);
 
                   return (
                     <motion.div
-                      key={log.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.02 }}
-                      className="group px-5 py-3 hover:bg-stone-50/50 transition-colors"
+                      key={event.id}
+                      initial={event.isLive ? { opacity: 0, y: -20, scale: 0.95 } : { opacity: 0 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className={`group px-5 py-3 hover:bg-stone-50/50 transition-colors ${
+                        event.isLive ? "bg-emerald-50/30" : ""
+                      }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colors.bg}`}>
                           <Icon size={14} className={colors.text} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-stone-900">{config.label}</p>
-                            {description && (
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
-                                {description}
-                              </span>
-                            )}
-                          </div>
+                          <p className="text-sm font-medium text-stone-900">{event.message}</p>
                           <p className="text-xs text-stone-500 mt-0.5">
-                            {log.userEmail || "System"}
+                            {event.userEmail || "System"}
                           </p>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-xs text-stone-400" title={formatAbsoluteTime(log.timestamp)}>
-                            {formatRelativeTime(log.timestamp)}
+                        <div className="text-right shrink-0 flex items-center gap-2">
+                          {event.isLive && (
+                            <span className="text-[10px] font-medium text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
+                              NEW
+                            </span>
+                          )}
+                          <p className="text-xs text-stone-400" title={formatAbsoluteTime(event.timestamp)}>
+                            {formatRelativeTime(event.timestamp)}
                           </p>
                         </div>
                       </div>

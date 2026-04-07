@@ -1,0 +1,17 @@
+export type AuditAction =
+  | "login"
+  | "logout"
+  | "register"
+  | "mode_change"
+  | "template_create"
+  | "template_update"
+  | "template_delete"
+  | "template_activate"
+  | "template_deactivate"
+  | "project_create"
+  | "project_update"
+  | "project_delete"
+  | "project_enable"
+  | "project_disable"
+  | "settings_update"
+  | "api_key_regenerate";

@@ -9,7 +9,7 @@ import { InlineLoader } from "@/components/shared/logo-loader";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { ProjectOverview } from "@/components/dashboard/tabs/overview";
 import { ProjectKeys } from "@/components/dashboard/tabs/keys";
-import { ProjectModes } from "@/components/dashboard/tabs/modes";
+import { ProjectModesWithContext } from "@/components/dashboard/tabs/modes-with-context";
 import { ProjectEvents } from "@/components/dashboard/tabs/events";
 import { ProjectTemplates } from "@/components/dashboard/tabs/templates";
 
@@ -324,7 +324,7 @@ export default function DashboardPage() {
                     <ProjectKeys project={selectedProject} />
                   )}
                   {activeTab === "modes" && (
-                    <ProjectModes project={selectedProject} onRefresh={fetchProjects} />
+                    <ProjectModesWithContext projectId={selectedProject.id} onRefresh={fetchProjects} />
                   )}
                   {activeTab === "templates" && (
                     <ProjectTemplates project={selectedProject} onRefresh={fetchProjects} />

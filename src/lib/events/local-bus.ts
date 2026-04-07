@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import type { EventBus, ModeEvent, ModeEventHandler } from "./bus";
+import type { EventBus, ModeEvent, AuditEvent, EventHandler } from "./bus";
 
 export class LocalEventBus implements EventBus {
   private emitter: EventEmitter;
@@ -9,15 +9,15 @@ export class LocalEventBus implements EventBus {
     this.emitter.setMaxListeners(0);
   }
 
-  emit(channel: string, payload: ModeEvent): void {
+  emit(channel: string, payload: ModeEvent | AuditEvent): void {
     this.emitter.emit(channel, payload);
   }
 
-  on(channel: string, handler: ModeEventHandler): void {
+  on(channel: string, handler: EventHandler): void {
     this.emitter.on(channel, handler);
   }
 
-  off(channel: string, handler: ModeEventHandler): void {
+  off(channel: string, handler: EventHandler): void {
     this.emitter.off(channel, handler);
   }
 }

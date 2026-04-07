@@ -289,6 +289,10 @@
       sseFailStart = null;
       inFallback = false;
       stopPollingFallback();
+      // Signal SSE ready for tests
+      if (window.__SWITCHY_TEST__) {
+        window.__SWITCHY_SSE_READY__ = true;
+      }
       // Always re-sync with server on reconnect
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) { return res.json(); })

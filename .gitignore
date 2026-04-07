@@ -28,6 +28,10 @@
 
 # test
 /test
+/test-results
+test-summary.json
+playwright-results.json
+.pw-project.json
 
 # debug
 npm-debug.log*

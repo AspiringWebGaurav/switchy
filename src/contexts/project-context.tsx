@@ -75,6 +75,8 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   const sseVersionRef = useRef<number>(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const tabIdRef = useRef<string>(`tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -222,6 +224,35 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     };
   }, [project?.publicKey, projectId]);
 
+  // BroadcastChannel for multi-tab sync
+  useEffect(() => {
+    if (typeof window === "undefined" || !("BroadcastChannel" in window)) {
+      return;
+    }
+
+    const channel = new BroadcastChannel("switchy-mode-sync");
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent) => {
+      const msg = event.data;
+      // Ignore messages from this tab or for different projects
+      if (msg.source === tabIdRef.current || msg.projectId !== projectId) {
+        return;
+      }
+      // Update state from other tab's broadcast
+      if (msg.version > sseVersionRef.current) {
+        sseVersionRef.current = msg.version;
+        setModeState(msg.mode);
+        setConfig(msg.config);
+      }
+    };
+
+    return () => {
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, [projectId]);
+
   const setMode = useCallback(
     async (newMode: ModeValue): Promise<boolean> => {
       const prevMode = mode;
@@ -237,6 +268,19 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
         });
 
         if (res.ok) {
+          const json = await res.json();
+          const updatedPolicy = json.data;
+          // Broadcast to other tabs
+          if (broadcastChannelRef.current && updatedPolicy) {
+            broadcastChannelRef.current.postMessage({
+              type: "mode_change",
+              projectId,
+              mode: newMode,
+              config: updatedPolicy.config || config,
+              version: updatedPolicy.updatedAt || Date.now(),
+              source: tabIdRef.current,
+            });
+          }
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus("idle"), 2000);
           return true;

@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { getProjectByPublicKey } from "@/lib/services/project.service";
 import { redisGet } from "@/lib/redis/client";
 import { getEventBus } from "@/lib/events/bus";
-import type { ModeEvent } from "@/lib/events/bus";
+import type { ModeEvent, AuditEvent } from "@/lib/events/bus";
 
 export const runtime = "nodejs";
 
@@ -30,7 +30,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
   }
 
-  const channel = `mode:${projectId}`;
+  const modeChannel = `mode:${projectId}`;
+  const auditChannel = `audit:${projectId}`;
   const bus = getEventBus();
   const encoder = new TextEncoder();
 
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       function cleanup() {
         if (closed) return;
         closed = true;
-        bus.off(channel, handler);
+        bus.off(modeChannel, modeHandler);
+        bus.off(auditChannel, auditHandler);
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
@@ -69,9 +71,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
-      function handler(event: ModeEvent) {
+      function modeHandler(event: ModeEvent) {
         write(
           `event: mode\n` +
+            `id: ${event.version}\n` +
+            `data: ${JSON.stringify(event)}\n\n`
+        );
+      }
+
+      function auditHandler(event: AuditEvent) {
+        write(
+          `event: audit\n` +
             `id: ${event.version}\n` +
             `data: ${JSON.stringify(event)}\n\n`
         );
@@ -91,7 +101,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         { once: true }
       );
 
-      // Catch-up replay on reconnect via Last-Event-ID
+      // Catch-up replay on reconnect via Last-Event-ID (mode events only)
       const lastEventIdHeader = request.headers.get("last-event-id");
       if (lastEventIdHeader) {
         const lastId = parseInt(lastEventIdHeader, 10);
@@ -99,7 +109,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           redisGet<ModeEvent>(`mode:event:${projectId}`)
             .then((cached) => {
               if (cached && cached.version > lastId) {
-                handler(cached);
+                modeHandler(cached);
               }
             })
             .catch(() => {
@@ -109,7 +119,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
 
       // Subscribe to live event bus — zero polling
-      bus.on(channel, handler);
+      bus.on(modeChannel, modeHandler);
+      bus.on(auditChannel, auditHandler);
 
       // Heartbeat every 25 s — keeps proxy/CDN from closing idle connections
       heartbeatTimer = setInterval(() => write(":\n\n"), 25000);
