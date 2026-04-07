@@ -76,19 +76,50 @@ const colorClasses: Record<string, { bg: string; text: string; border: string }>
 };
 
 function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
+  const now = new Date();
+  const date = new Date(timestamp);
+  const diff = now.getTime() - timestamp;
   
+  // Just now (< 1 minute)
   if (diff < 60000) return "Just now";
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
   
-  return new Date(timestamp).toLocaleDateString();
+  const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  
+  // Today
+  if (date.toDateString() === now.toDateString()) {
+    return `Today at ${timeStr}`;
+  }
+  
+  // Yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday at ${timeStr}`;
+  }
+  
+  // This week (show day name)
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  if (date > weekAgo) {
+    const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
+    return `${dayName} at ${timeStr}`;
+  }
+  
+  // Older (show full date)
+  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${dateStr} at ${timeStr}`;
 }
 
 function formatAbsoluteTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString();
+  return new Date(timestamp).toLocaleString("en-US", {
+    weekday: "long",
+    month: "long", 
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
 }
 
 export function ProjectEvents({ project }: ProjectEventsProps) {
@@ -262,31 +293,31 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
     switch (action) {
       case "mode_change":
         const modeTo = metadata?.to as string;
-        return modeTo ? `Mode changed to ${modeTo.charAt(0).toUpperCase() + modeTo.slice(1)}` : "Mode changed";
+        return modeTo ? `Switched to ${modeTo.charAt(0).toUpperCase() + modeTo.slice(1)} mode` : "Mode switched";
       case "template_activate":
-        return `Applied template "${metadata?.templateName || "Untitled"}"`;
+        return `Activated "${metadata?.templateName || "Untitled"}" template`;
       case "template_create":
-        return `Created template "${metadata?.templateName || "Untitled"}"`;
+        return `Created new template "${metadata?.templateName || "Untitled"}"`;
       case "template_update":
-        return `Updated template "${metadata?.templateName || "Untitled"}"`;
+        return `Updated "${metadata?.templateName || "Untitled"}" template`;
       case "template_delete":
-        return `Deleted template "${metadata?.templateName || "Untitled"}"`;
+        return `Removed "${metadata?.templateName || "Untitled"}" template`;
       case "template_deactivate":
-        return `Deactivated template "${metadata?.templateName || "Untitled"}"`;
+        return `Deactivated "${metadata?.templateName || "Untitled"}" template`;
       case "project_enable":
-        return "Project enabled";
+        return "Project is now live";
       case "project_disable":
         return "Project paused";
       case "project_update":
-        return metadata?.name ? `Renamed to "${metadata.name}"` : "Settings updated";
+        return metadata?.name ? `Renamed project to "${metadata.name}"` : "Project settings updated";
       case "login":
-        return "Signed in";
+        return "Signed in to dashboard";
       case "logout":
-        return "Signed out";
+        return "Session ended";
       case "register":
         return "Account created";
       case "api_key_regenerate":
-        return "API key regenerated";
+        return "API key regenerated for security";
       default:
         return actionConfig[action]?.label || action;
     }

@@ -11,6 +11,7 @@ Switchyy is a SaaS platform that provides remote control for your app's behavior
 - **One-click mode switching** — Live, Maintenance, Custom, and 20+ preset modes
 - **Universal compatibility** — Works with React, Vue, Next.js, Nuxt, Svelte, Astro, Angular, plain HTML
 - **Real-time updates** — SSE-powered instant mode changes across all connected clients
+- **Live Activity Feed** — Track all actions instantly with enterprise-grade timestamps
 - **Sub-100ms response** — Redis-cached decisions for lightning-fast responses
 - **Smart search** — Fuzzy framework matching with Trie-based autocomplete
 - **Beautiful overlays** — Customizable maintenance pages with blur effects

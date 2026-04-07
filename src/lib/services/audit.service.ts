@@ -42,36 +42,36 @@ function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
 function generateHumanMessage(action: AuditAction, metadata: Record<string, unknown>): string {
   switch (action) {
     case "mode_change":
-      return `Mode changed to ${formatModeName(metadata.to as string)}`;
+      return `Switched to ${formatModeName(metadata.to as string)} mode`;
     case "template_activate":
-      return `Applied template "${metadata.templateName || "Untitled"}"`;
+      return `Activated "${metadata.templateName || "Untitled"}" template`;
     case "template_create":
-      return `Created template "${metadata.templateName || "Untitled"}"`;
+      return `Created new template "${metadata.templateName || "Untitled"}"`;
     case "template_update":
-      return `Updated template "${metadata.templateName || "Untitled"}"`;
+      return `Updated "${metadata.templateName || "Untitled"}" template`;
     case "template_delete":
-      return `Deleted template "${metadata.templateName || "Untitled"}"`;
+      return `Removed "${metadata.templateName || "Untitled"}" template`;
     case "template_deactivate":
-      return `Deactivated template "${metadata.templateName || "Untitled"}"`;
+      return `Deactivated "${metadata.templateName || "Untitled"}" template`;
     case "project_enable":
-      return "Project enabled";
+      return "Project is now live";
     case "project_disable":
       return "Project paused";
     case "project_update":
-      if (metadata.name) return `Project renamed to "${metadata.name}"`;
+      if (metadata.name) return `Renamed project to "${metadata.name}"`;
       return "Project settings updated";
     case "project_create":
-      return "Project created";
+      return "New project created";
     case "project_delete":
       return "Project deleted";
     case "settings_update":
       return "Settings updated";
     case "api_key_regenerate":
-      return "API key regenerated";
+      return "API key regenerated for security";
     case "login":
-      return "Signed in";
+      return "Signed in to dashboard";
     case "logout":
-      return "Signed out";
+      return "Session ended";
     case "register":
       return "Account created";
     default:
@@ -87,40 +87,39 @@ function formatModeName(mode: string | undefined): string {
 export async function logAuditEvent(input: AuditLogInput): Promise<void> {
   const { projectId, action, userId, userEmail, metadata = {}, ip } = input;
 
-  try {
-    const logRef = adminDb
-      .collection("projects")
-      .doc(projectId)
-      .collection("audit_logs")
-      .doc();
+  const timestamp = Date.now();
+  const id = `audit_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
 
-    const timestamp = Date.now();
-    const log: AuditLog = {
-      id: logRef.id,
-      action,
-      userId,
-      userEmail,
-      metadata: stripUndefined(metadata),
-      ip,
-      timestamp,
-    };
+  // 1. EMIT FIRST — instant real-time delivery to UI via SSE
+  const auditEvent: AuditEvent = {
+    id,
+    projectId,
+    action,
+    message: generateHumanMessage(action, metadata),
+    userEmail,
+    timestamp,
+    version: nextVersion(),
+  };
+  getEventBus().emit(`audit:${projectId}`, auditEvent);
 
-    await logRef.set(log);
+  // 2. FIRESTORE AFTER — fire-and-forget for history (non-blocking)
+  const logRef = adminDb
+    .collection("projects")
+    .doc(projectId)
+    .collection("audit_logs")
+    .doc(id);
 
-    // Emit to event bus for real-time delivery (fire-and-forget)
-    const auditEvent: AuditEvent = {
-      id: logRef.id,
-      projectId,
-      action,
-      message: generateHumanMessage(action, metadata),
-      userEmail,
-      timestamp,
-      version: nextVersion(),
-    };
-    getEventBus().emit(`audit:${projectId}`, auditEvent);
-  } catch (err) {
-    console.error("[Audit] Failed to log event:", err);
-  }
+  const logData: Omit<AuditLog, 'ip'> & { ip?: string } = {
+    id,
+    action,
+    userId,
+    userEmail,
+    metadata: stripUndefined(metadata),
+    timestamp,
+  };
+  if (ip) logData.ip = ip;
+  
+  logRef.set(logData).catch(err => console.error("[Audit] Firestore write failed:", err));
 }
 
 export async function getAuditLogs(
