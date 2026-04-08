@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   ChevronDown,
   LogOut,
+  Settings,
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 
 interface Project {
@@ -134,13 +136,22 @@ export function DashboardSidebar({
         {user && (
           <div className={`${collapsed ? "flex justify-center" : ""}`}>
             {collapsed ? (
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                title="Logout"
-              >
-                <LogOut size={16} />
-              </button>
+              <div className="flex flex-col items-center gap-1">
+                <Link
+                  href="/dashboard/settings"
+                  className="p-2 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  title="Settings"
+                >
+                  <Settings size={16} />
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
             ) : (
               <div className="px-2 py-2">
                 <div className="flex items-center gap-2.5 mb-2">
@@ -161,7 +172,14 @@ export function DashboardSidebar({
                     <p className="text-xs text-zinc-400 truncate">{user.email}</p>
                   </div>
                 </div>
-                <button
+                <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors mb-1"
+              >
+                <Settings size={14} />
+                <span>Settings</span>
+              </Link>
+              <button
                   onClick={handleLogout}
                   className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-red-500 hover:bg-red-50 transition-colors"
                 >

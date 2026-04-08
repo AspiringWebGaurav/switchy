@@ -29,6 +29,110 @@
   var inFallback = false;
   var _removeTimer = null;
   var _debugBadge = null;
+  var _visibilityConfig = null; // cached visibility settings
+
+  // ── Debug mode ─────────────────────────────────────────────────────────────
+  var DEBUG = false;
+  try { DEBUG = localStorage.getItem('switchy_debug') === 'true'; } catch(e) {}
+
+  function log() {
+    if (DEBUG) console.log.apply(console, ['[Switchyy]'].concat([].slice.call(arguments)));
+  }
+
+  // ── Environment detection ──────────────────────────────────────────────────
+  function isDevEnvironment(hostname) {
+    return hostname === 'localhost' ||
+           hostname === '127.0.0.1' ||
+           /^192\.168\.\d+\.\d+$/.test(hostname) ||
+           /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+           /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname) ||
+           hostname.indexOf('.local') === hostname.length - 6 ||
+           hostname.indexOf('.localhost') === hostname.length - 10;
+  }
+
+  function matchDomain(hostname, pattern) {
+    if (pattern.indexOf('*.') === 0) {
+      var suffix = pattern.slice(1); // .example.com
+      return hostname.indexOf(suffix) === hostname.length - suffix.length ||
+             hostname === pattern.slice(2);
+    }
+    return hostname === pattern;
+  }
+
+  // ── Centralized visibility decision ────────────────────────────────────────
+  function shouldRenderOverlay(config) {
+    var hostname = window.location.hostname;
+    var isDev = isDevEnvironment(hostname);
+    var visibility = (config && config.visibility) || {};
+    var devEnabled = visibility.devOverlayEnabled === true; // explicit true required
+    var allowlist = visibility.domainAllowlist || [];
+    var blocklist = visibility.domainBlocklist || [];
+
+    log('hostname:', hostname, 'isDev:', isDev, 'devEnabled:', devEnabled, 'allowlist:', allowlist, 'blocklist:', blocklist);
+
+    // Hard safety: dev blocked unless explicitly enabled
+    if (isDev && !devEnabled) {
+      log('BLOCKED: dev environment, devOverlayEnabled=false');
+      return false;
+    }
+
+    // Blocklist check first (takes priority) - if hostname matches, block it
+    if (blocklist.length > 0) {
+      for (var i = 0; i < blocklist.length; i++) {
+        if (matchDomain(hostname, blocklist[i])) {
+          log('BLOCKED: hostname in blocklist');
+          return false;
+        }
+      }
+    }
+
+    // Allowlist check (if non-empty, hostname must match)
+    if (allowlist.length > 0) {
+      var matched = false;
+      for (var i = 0; i < allowlist.length; i++) {
+        if (matchDomain(hostname, allowlist[i])) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        log('BLOCKED: hostname not in allowlist');
+        return false;
+      }
+    }
+
+    log('ALLOWED: overlay will render');
+    return true;
+  }
+
+  // ── Session cache ──────────────────────────────────────────────────────────
+  var CACHE_KEY = 'switchy_config_' + projectId;
+  var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  function getCachedConfig() {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var cached = JSON.parse(raw);
+      if (Date.now() - cached.ts > CACHE_TTL) {
+        sessionStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+      log('Using cached config (age:', Math.round((Date.now() - cached.ts) / 1000) + 's)');
+      return cached.data;
+    } catch(e) { return null; }
+  }
+
+  function setCachedConfig(data) {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+      log('Config cached');
+    } catch(e) {}
+  }
+
+  function clearCachedConfig() {
+    try { sessionStorage.removeItem(CACHE_KEY); } catch(e) {}
+  }
 
   // ── Layout system ─────────────────────────────────────────────────────────
   var layoutCache = {};
@@ -266,7 +370,12 @@
     pollTimer = setInterval(function () {
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) { return res.json(); })
-        .then(function (json) { if (json.data) applyMode(json.data); })
+        .then(function (json) {
+          if (json.data) {
+            setCachedConfig(json.data);
+            applyModeIfAllowed(json.data);
+          }
+        })
         .catch(function () { /* silent */ });
     }, 15000);
   }
@@ -278,7 +387,25 @@
     evtSource = new EventSource(eventsEndpoint);
 
     evtSource.addEventListener("mode", function (e) {
-      try { applyMode(JSON.parse(e.data)); } catch (err) {
+      try {
+        var data = JSON.parse(e.data);
+        // Merge with cached visibility if SSE doesn't include it
+        if (!data.visibility && _visibilityConfig) {
+          data.visibility = _visibilityConfig;
+        }
+        // Update cache with new mode data
+        var cached = getCachedConfig();
+        if (cached) {
+          cached.mode = data.mode;
+          cached.message = data.message;
+          cached.buttonText = data.buttonText;
+          cached.redirect = data.redirect;
+          cached.timestamp = data.timestamp || data.version;
+          if (data.visibility) cached.visibility = data.visibility;
+          setCachedConfig(cached);
+        }
+        applyModeIfAllowed(data);
+      } catch (err) {
         console.error("[Switchyy] SSE parse error:", err);
       }
     });
@@ -296,7 +423,12 @@
       // Always re-sync with server on reconnect
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) { return res.json(); })
-        .then(function (json) { if (json.data) applyMode(json.data); })
+        .then(function (json) {
+          if (json.data) {
+            setCachedConfig(json.data);
+            applyModeIfAllowed(json.data);
+          }
+        })
         .catch(function () { /* silent — next SSE event will correct */ });
     };
 
@@ -320,21 +452,80 @@
     }
   });
 
-  // ── Startup — server-first, zero premature UI ─────────────────────────────
+  // ── Guarded applyMode — respects visibility ────────────────────────────────
+  function applyModeIfAllowed(data) {
+    if (!data) return;
+    
+    // Store visibility config for SSE updates
+    if (data.visibility) {
+      _visibilityConfig = data.visibility;
+    }
+    
+    // Check visibility rules
+    if (!shouldRenderOverlay(data)) {
+      // Still update state but don't render
+      if (data.mode === 'live') {
+        currentMode = 'live';
+        var existing = document.getElementById('switchy-overlay');
+        if (existing) fadeOutOverlay(existing);
+      }
+      return;
+    }
+    
+    applyMode(data);
+  }
+
+  // ── Startup — instant pre-check, then cache/fetch ──────────────────────────
   function init() {
+    var hostname = window.location.hostname;
+    var isDev = isDevEnvironment(hostname);
+    
+    log('Init — hostname:', hostname, 'isDev:', isDev);
+
+    // INSTANT PRE-CHECK: if dev, check cache for explicit allow
+    if (isDev) {
+      var cached = getCachedConfig();
+      if (cached) {
+        var visibility = cached.visibility || {};
+        if (visibility.devOverlayEnabled !== true) {
+          log('Dev blocked via cached config — skipping init');
+          return; // EXIT — no overlay, no SSE, no API
+        }
+      } else {
+        // No cache in dev — need to fetch to check settings
+        // But we'll still apply visibility rules after fetch
+        log('Dev environment, no cache — will fetch and check settings');
+      }
+    }
+
     injectStyles();
-    // Server-first: fetch decision BEFORE any UI rendering
-    // NO blocker, NO overlay until server confirms mode
+
+    // Try session cache first (for non-dev or dev with explicit allow)
+    var cached = getCachedConfig();
+    if (cached) {
+      log('Applying cached mode:', cached.mode);
+      applyModeIfAllowed(cached);
+      connectSSE(); // still connect for real-time updates
+      return;
+    }
+
+    // Fetch fresh decision
     loadLayout(DEFAULT_LAYOUT, function () {
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) {
           if (!res.ok) throw new Error("Switchyy: HTTP " + res.status);
           return res.json();
         })
-        .then(function (json) { if (json.data) applyMode(json.data); })
+        .then(function (json) {
+          if (json.data) {
+            setCachedConfig(json.data);
+            applyModeIfAllowed(json.data);
+          }
+        })
         .catch(function (err) {
           console.error("[Switchyy]", err.message);
-          // On error: remain neutral, no UI injection
+          // On error in dev: remain blocked (safe default)
+          // On error in prod: remain neutral, no UI injection
         });
       connectSSE();
     });

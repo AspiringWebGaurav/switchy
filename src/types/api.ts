@@ -4,6 +4,12 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 
+export interface VisibilityConfig {
+  devOverlayEnabled: boolean;
+  domainAllowlist: string[];
+  domainBlocklist: string[];
+}
+
 export interface DecisionResponse {
   mode: string;
   message: string | null;
@@ -15,4 +21,5 @@ export interface DecisionResponse {
     html: string;
     css: string;
   };
+  visibility?: VisibilityConfig;
 }

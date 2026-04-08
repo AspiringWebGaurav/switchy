@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { verifySession } from "@/lib/services/auth.service";
 import { Providers } from "@/components/shared/providers";
 import { Navbar } from "@/components/shared/navbar";
-import { Footer } from "@/components/shared/footer";
 import { Analytics } from "@/components/shared/analytics";
 import {
   SITE_URL,
@@ -104,7 +103,6 @@ export default async function RootLayout({
         <Providers user={user}>
           <Navbar />
           <div className="flex flex-1 flex-col">{children}</div>
-          <Footer />
         </Providers>
       </body>
     </html>

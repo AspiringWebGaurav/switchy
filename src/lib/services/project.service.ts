@@ -67,7 +67,7 @@ export async function getProjectByPublicKey(
 
 export async function updateProject(
   projectId: string,
-  data: Partial<Pick<Project, "name" | "enabled" | "detected" | "activeTemplateId">>
+  data: Partial<Pick<Project, "name" | "enabled" | "detected" | "activeTemplateId" | "settings">>
 ): Promise<void> {
   await projectsRef.doc(projectId).update({
     ...data,
@@ -75,7 +75,7 @@ export async function updateProject(
   });
 
   // Invalidate decision cache when settings change
-  if (data.enabled !== undefined || data.activeTemplateId !== undefined) {
+  if (data.enabled !== undefined || data.activeTemplateId !== undefined || data.settings !== undefined) {
     await redisDel(`decide:${projectId}`);
   }
 }

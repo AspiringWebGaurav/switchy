@@ -1,9 +1,10 @@
 import { getProjectByPublicKey, updateProject } from "@/lib/services/project.service";
 import { getModePolicy } from "@/lib/services/policy.service";
+import { getUserById } from "@/lib/services/user.service";
 import { redisGet, redisSet } from "@/lib/redis/client";
 import { adminDb } from "@/lib/firebase/admin";
 import { CACHE_TTL } from "@/config/constants";
-import type { DecisionResponse } from "@/types/api";
+import type { DecisionResponse, VisibilityConfig } from "@/types/api";
 import type { LayoutTemplate } from "@/types/template";
 
 export async function getDecision(
@@ -27,6 +28,8 @@ export async function getDecision(
     if (!project.detected) {
       await updateProject(projectId, { detected: true });
     }
+    // Still include visibility even for pending projects
+    const owner = await getUserById(project.ownerId);
     const pending: DecisionResponse = {
       mode: "live",
       message: null,
@@ -34,6 +37,11 @@ export async function getDecision(
       redirect: null,
       timestamp: Date.now(),
       pending: true,
+      visibility: {
+        devOverlayEnabled: owner?.preferences?.devOverlayEnabled ?? false,
+        domainAllowlist: owner?.preferences?.domainAllowlist ?? [],
+        domainBlocklist: owner?.preferences?.domainBlocklist ?? [],
+      },
     };
     await redisSet(cacheKey, pending, CACHE_TTL);
     return pending;
@@ -43,12 +51,35 @@ export async function getDecision(
   const policy = await getModePolicy(projectId);
   if (!policy) return null;
 
+  // Resolve visibility: project > user > default (false)
+  const needUserFallback = 
+    (project.settings?.devOverlayEnabled === undefined || project.settings.devOverlayEnabled === null) ||
+    (project.settings?.domainAllowlist === undefined || project.settings.domainAllowlist === null);
+  
+  const owner = needUserFallback ? await getUserById(project.ownerId) : null;
+
+  const visibility: VisibilityConfig = {
+    devOverlayEnabled: 
+      (project.settings?.devOverlayEnabled !== undefined && project.settings.devOverlayEnabled !== null)
+        ? project.settings.devOverlayEnabled
+        : (owner?.preferences?.devOverlayEnabled ?? false),
+    domainAllowlist: 
+      (project.settings?.domainAllowlist !== undefined && project.settings.domainAllowlist !== null)
+        ? project.settings.domainAllowlist
+        : (owner?.preferences?.domainAllowlist ?? []),
+    domainBlocklist:
+      (project.settings?.domainBlocklist !== undefined && project.settings.domainBlocklist !== null)
+        ? project.settings.domainBlocklist
+        : (owner?.preferences?.domainBlocklist ?? []),
+  };
+
   const response: DecisionResponse = {
     mode: policy.value,
     message: policy.config.message,
     buttonText: policy.config.buttonText,
     redirect: policy.config.redirectUrl,
     timestamp: Date.now(),
+    visibility,
   };
 
   // If project has active custom template, fetch and include it

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check, Palette } from "lucide-react";
+import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check, Palette, Settings } from "lucide-react";
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal";
 import { InlineLoader } from "@/components/shared/logo-loader";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -12,6 +12,7 @@ import { ProjectKeys } from "@/components/dashboard/tabs/keys";
 import { ProjectModesWithContext } from "@/components/dashboard/tabs/modes-with-context";
 import { ProjectEvents } from "@/components/dashboard/tabs/events";
 import { ProjectTemplates } from "@/components/dashboard/tabs/templates";
+import { SettingsContent } from "@/components/dashboard/settings-content";
 
 interface ProjectWithMode {
   id: string;
@@ -24,7 +25,7 @@ interface ProjectWithMode {
   detected?: boolean;
 }
 
-type TabId = "overview" | "keys" | "modes" | "templates" | "events";
+type TabId = "overview" | "keys" | "modes" | "templates" | "events" | "settings";
 
 const tabs: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -32,6 +33,7 @@ const tabs: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "modes", label: "Modes", icon: Sliders },
   { id: "templates", label: "Templates", icon: Palette },
   { id: "events", label: "Events", icon: Activity },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 const statusMessages = [
@@ -97,7 +99,7 @@ export default function DashboardPage() {
   // Read initial state from URL params
   const urlProjectId = searchParams.get("project");
   const urlTab = searchParams.get("tab") as TabId | null;
-  const validTabs: TabId[] = ["overview", "keys", "modes", "templates", "events"];
+  const validTabs: TabId[] = ["overview", "keys", "modes", "templates", "events", "settings"];
 
   // Derive selected project and active tab from URL or defaults
   const selectedProjectId = useMemo(() => {
@@ -331,6 +333,17 @@ export default function DashboardPage() {
                   )}
                   {activeTab === "events" && (
                     <ProjectEvents project={selectedProject} />
+                  )}
+                  {activeTab === "settings" && (
+                    <div>
+                      <h2 className="text-lg font-semibold text-zinc-900 mb-1">Banner Settings</h2>
+                      <p className="text-sm text-zinc-500 mb-6">Choose where banners appear for this project</p>
+                      <SettingsContent 
+                        type="project" 
+                        projectId={selectedProject.id}
+                        onSave={fetchProjects}
+                      />
+                    </div>
                   )}
                 </motion.div>
               </AnimatePresence>

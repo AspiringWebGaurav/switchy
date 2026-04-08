@@ -127,6 +127,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       });
     }
 
+    // Log visibility settings change
+    if (parsed.data.settings) {
+      logAuditEvent({
+        projectId: id,
+        action: "project_update",
+        userId: user.uid,
+        userEmail: user.email || "",
+        metadata: { settings: parsed.data.settings },
+      });
+    }
+
     return success(updated);
   } catch (err) {
     console.error("[Projects] Update failed:", err);
