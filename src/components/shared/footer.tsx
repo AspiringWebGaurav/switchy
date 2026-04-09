@@ -17,16 +17,14 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="relative w-full border-t border-zinc-200/60 bg-gradient-to-b from-white to-zinc-50/50">
-      {/* Grid background - same as homepage */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:24px_24px]" />
+    <footer className="relative w-full z-10">
       
       {/* Main Footer */}
       <div className="relative z-10 w-full px-8 md:px-16 lg:px-24 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2.5 group">
+            <Link href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2.5 group">
               <svg viewBox="0 0 32 32" fill="none" className="h-8 w-8 transition-transform group-hover:scale-105">
                 <defs>
                   <linearGradient id="footerLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -54,6 +52,8 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    target="_blank" 
+                    rel="noopener noreferrer"
                     className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
                   >
                     {link.label}
@@ -71,6 +71,8 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    target="_blank" 
+                    rel="noopener noreferrer"
                     className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
                   >
                     {link.label}
@@ -88,6 +90,8 @@ export function Footer() {
             </p>
             <Link
               href="/dashboard"
+              target="_blank" 
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
             >
               Go to Dashboard
@@ -100,13 +104,13 @@ export function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="relative z-10 w-full border-t border-zinc-200/60">
+      <div className="relative z-10 w-full">
         <div className="w-full px-8 md:px-16 lg:px-24 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-zinc-400">
             © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
           <div className="flex items-center gap-5 text-xs">
-            <Link href="/docs" className="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <Link href="/docs" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-600 transition-colors">
               Docs
             </Link>
             <a

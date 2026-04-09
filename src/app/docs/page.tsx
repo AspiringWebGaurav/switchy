@@ -14,6 +14,7 @@ import {
   Wifi,
   Radio,
   Bookmark,
+  Settings,
 } from "lucide-react";
 import { APP_NAME } from "@/config/constants";
 
@@ -25,6 +26,7 @@ const sections = [
   { id: "modes", label: "Modes", icon: ToggleLeft },
   { id: "real-time", label: "Real-Time Updates", icon: Radio },
   { id: "presets", label: "Custom Presets", icon: Bookmark },
+  { id: "security-settings", label: "Security & Settings", icon: Settings },
   { id: "examples", label: "Examples", icon: Lightbulb },
   { id: "best-practices", label: "Best Practices", icon: Shield },
 ];
@@ -473,7 +475,48 @@ export default function RootLayout({ children }) {
             </div>
           </section>
 
-          {/* Section 8: Examples */}
+          {/* Section 8: Security & Settings */}
+          <section id="security-settings" className="scroll-mt-20 mb-14">
+            <h2 className="text-2xl font-bold text-stone-900 mb-4 pb-3 border-b border-stone-200">Security & Settings</h2>
+            <p className="text-base text-stone-700 leading-7 mb-6">
+              Control exactly where and how your overlays appear using strict domain isolation and dedicated test modes.
+            </p>
+
+            <div className="space-y-4">
+              <div className="rounded-xl border border-stone-200 bg-white p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Domain Allowlist & Blocklists</h4>
+                <p className="text-sm text-stone-600 mb-3">
+                  Prevent unauthorized use of your project keys by restricting which domains can render your overlays:
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-stone-600 ml-4 mb-4">
+                  <li className="flex items-start gap-2">
+                    <ChevronRight size={13} className="text-indigo-400 mt-0.5 shrink-0" />
+                    <span><strong>Allowlist:</strong> If populated, your banners will <em>only</em> load on domains matching the list (e.g. <code>app.yoursite.com</code>).</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ChevronRight size={13} className="text-indigo-400 mt-0.5 shrink-0" />
+                    <span><strong>Blocklist:</strong> Use this to explicitly ban local testing environments (<code>localhost</code>) or staging sites.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-stone-200 bg-white p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Development Test Overlay</h4>
+                <p className="text-sm text-stone-600">
+                  When integrating Switchyy visually into a new boilerplate, toggle the <strong>Testing Overlay</strong> in your dashboard. This simulates an active custom layout locally to easily adapt our CSS alongside your components before a public release.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-stone-200 bg-white p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Inheritance vs Custom Scopes</h4>
+                <p className="text-sm text-stone-600">
+                  By default, any new project strictly inherits your high-level User preferences. Toggling "Use Custom Settings" within a project layout unlocks independent granular domain controls so client A differs entirely from client B simultaneously.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 9: Examples */}
           <section id="examples" className="scroll-mt-20 mb-14">
             <h2 className="text-2xl font-bold text-stone-900 mb-4 pb-3 border-b border-stone-200">Examples</h2>
             <p className="text-base text-stone-700 leading-7 mb-6">

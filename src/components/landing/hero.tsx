@@ -11,7 +11,7 @@ import { FrameworkIcon } from "@/components/ui/framework-icon";
 
 const rotatingWords = ["real-time", "one click", "zero deploys", "instantly"];
 
-export function LandingHero() {
+export function LandingHero({ children }: { children?: React.ReactNode }) {
   const router = useRouter();
   const { user } = useAuth();
   const { openLogin } = useLoginModal();
@@ -30,7 +30,7 @@ export function LandingHero() {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_40%,transparent_100%)]" />
 
       {/* Hero */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
+      <div className="relative z-10 flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -225,6 +225,7 @@ export function LandingHero() {
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-gradient-to-r from-blue-200/30 to-indigo-200/30 blur-3xl" 
         />
       </div>
+      {children}
     </div>
   );
 }
