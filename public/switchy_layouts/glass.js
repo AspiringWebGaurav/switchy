@@ -170,7 +170,7 @@
 
   // ── CSS Constants ─────────────────────────────────────────────────────────
   var OVERLAY_CSS =
-    "position:fixed;inset:0;width:100vw;height:100vh;z-index:999999;overflow:hidden;" +
+    "position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:999999;overflow:hidden;" +
     "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
     "background:rgba(10,20,40,0.35);" +
     "backdrop-filter:blur(35px);" +
@@ -207,7 +207,7 @@
   function buildBrandingFooter(origin) {
     var footer = document.createElement("div");
     footer.style.cssText =
-      "position:absolute;bottom:32px;left:50%;transform:translateX(-50%);" +
+      "white-space:nowrap;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);" +
       "display:flex;align-items:center;gap:8px;" +
       "font-size:12px;color:rgba(255,255,255,0.35);letter-spacing:0.02em;";
 
