@@ -237,8 +237,9 @@
     var s = document.createElement("style");
     s.id = "switchy-styles";
     s.textContent =
+      ".switchy-lock{overflow:hidden!important;touch-action:none!important;overscroll-behavior:none!important;}" +
       "#switchy-overlay{transition:opacity 0.3s cubic-bezier(0.16,1,0.3,1)}" +
-      "#switchy-debug-badge{position:fixed;bottom:12px;left:12px;z-index:9999999;" +
+      "#switchy-debug-badge{position:fixed;bottom:12px;left:12px;z-index:2147483647;" +
       "background:rgba(15,15,15,0.88);color:#e2e8f0;" +
       "font-family:ui-monospace,Menlo,monospace;font-size:11px;" +
       "padding:5px 10px;border-radius:6px;pointer-events:none;line-height:1.5;" +
@@ -261,12 +262,24 @@
     _removeTimer = setTimeout(function () {
       _removeTimer = null;
       if (el.parentNode) el.parentNode.removeChild(el);
+      if (document.documentElement) document.documentElement.classList.remove("switchy-lock");
+      if (document.body) document.body.classList.remove("switchy-lock");
     }, 220);
   }
 
   function showOverlay(el) {
     if (!el) return;
     el.style.opacity = "0";
+    
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      if (document.documentElement) document.documentElement.classList.add("switchy-lock");
+      if (document.body) document.body.classList.add("switchy-lock");
+    }
+    
+    el.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    el.addEventListener('wheel', function(e) { e.preventDefault(); }, { passive: false });
+
     document.body.appendChild(el);
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.style.opacity = "1"; });
@@ -365,7 +378,7 @@
     var overlay = document.createElement("div");
     overlay.id = "switchy-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;width:100vw;height:100vh;z-index:999999;overflow:hidden;";
+      "position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;overflow:hidden;touch-action:none;overscroll-behavior:none;";
 
     // Process HTML - replace placeholders
     var html = template.html

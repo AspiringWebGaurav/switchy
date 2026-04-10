@@ -170,7 +170,8 @@
 
   // ── CSS Constants ─────────────────────────────────────────────────────────
   var OVERLAY_CSS =
-    "position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:999999;overflow:hidden;" +
+    "position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;overflow:hidden;" +
+    "overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none;" +
     "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
     "background:rgba(10,20,40,0.35);" +
     "backdrop-filter:blur(35px);" +
