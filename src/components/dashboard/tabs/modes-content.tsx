@@ -296,6 +296,24 @@ export function ProjectModesContent({ onRefresh }: ProjectModesContentProps) {
           <p className="text-[11px] text-stone-500">Changes apply instantly across all connected sites — no deploy needed</p>
         </div>
       </motion.div>
+
+      {/* Dev testing notice — shown when dev overlay is not explicitly enabled */}
+      {project?.settings?.devOverlayEnabled !== true && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50/70 border border-amber-200/70"
+        >
+          <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            Overlay is shown on localhost by default.{" "}
+            To suppress it on a specific dev URL (e.g. <span className="font-mono">localhost:3000</span>), add it to{" "}
+            <span className="font-semibold">Dev Suppression URLs</span> in the Settings tab.{" "}
+            Toggle <span className="font-semibold">&ldquo;Show overlay on localhost&rdquo;</span> off to hide it everywhere on dev.
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 }

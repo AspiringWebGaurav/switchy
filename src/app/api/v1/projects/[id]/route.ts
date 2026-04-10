@@ -6,15 +6,48 @@ import {
   deleteProject,
 } from "@/lib/services/project.service";
 import { getModePolicy, nextVersion } from "@/lib/services/policy.service";
+import { getUserById } from "@/lib/services/user.service";
 import { updateProjectSchema } from "@/lib/validators/project";
 import { success, error } from "@/lib/utils/response";
 import { getEventBus } from "@/lib/events/bus";
 import { redisSet, redisDel } from "@/lib/redis/client";
 import { EVENT_STORE_TTL } from "@/config/constants";
-import type { ModeEvent } from "@/lib/events/bus";
+import type { ModeEvent, SettingsEvent, ResolvedVisibility } from "@/lib/events/bus";
 import { logAuditEvent } from "@/lib/services/audit.service";
+import type { Project } from "@/types/project";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+/** Resolve the effective visibility for a project (project settings → user prefs → defaults). */
+async function resolveVisibility(project: Project): Promise<ResolvedVisibility> {
+  const s = project.settings;
+  const needsUserFallback =
+    s?.devOverlayEnabled === undefined || s?.devOverlayEnabled === null ||
+    s?.devBlocklist === undefined || s?.devBlocklist === null ||
+    s?.domainAllowlist === undefined || s?.domainAllowlist === null ||
+    s?.domainBlocklist === undefined || s?.domainBlocklist === null;
+
+  const owner = needsUserFallback ? await getUserById(project.ownerId) : null;
+
+  return {
+    devOverlayEnabled:
+      s?.devOverlayEnabled !== undefined && s?.devOverlayEnabled !== null
+        ? s.devOverlayEnabled
+        : owner?.preferences?.devOverlayEnabled,
+    devBlocklist:
+      s?.devBlocklist !== undefined && s?.devBlocklist !== null
+        ? s.devBlocklist
+        : (owner?.preferences?.devBlocklist ?? []),
+    domainAllowlist:
+      s?.domainAllowlist !== undefined && s?.domainAllowlist !== null
+        ? s.domainAllowlist
+        : (owner?.preferences?.domainAllowlist ?? []),
+    domainBlocklist:
+      s?.domainBlocklist !== undefined && s?.domainBlocklist !== null
+        ? s.domainBlocklist
+        : (owner?.preferences?.domainBlocklist ?? []),
+  };
+}
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -66,9 +99,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const version = nextVersion();
 
       if (willBeEnabled) {
-        // Activated: emit current mode
+        // Activated: emit current mode + resolved visibility
         const policy = await getModePolicy(id);
         const mode = policy?.value || "live";
+        const visibility = updated ? await resolveVisibility(updated) : undefined;
         const event: ModeEvent = {
           projectId: id,
           mode,
@@ -77,6 +111,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           redirect: policy?.config?.redirectUrl ?? null,
           version,
           timestamp: version,
+          visibility,
         };
         getEventBus().emit(`mode:${id}`, event);
         redisDel(`decide:${id}`).catch(() => {});
@@ -84,7 +119,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           console.warn(`[Project] Redis SET failed for mode:event:${id}:`, e)
         );
 
-        // Log audit event
         logAuditEvent({
           projectId: id,
           action: "project_enable",
@@ -108,7 +142,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           console.warn(`[Project] Redis SET failed for mode:event:${id}:`, e)
         );
 
-        // Log audit event
         logAuditEvent({
           projectId: id,
           action: "project_disable",
@@ -117,7 +150,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         });
       }
     } else if (parsed.data.name) {
-      // Log project update (name change, etc.)
       logAuditEvent({
         projectId: id,
         action: "project_update",
@@ -127,7 +159,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       });
     }
 
-    // Log visibility settings change
+    // Log and broadcast settings change — this is the critical real-time path.
+    // Even when only settings changed (no mode change), we must notify all connected
+    // overlay scripts and dashboard tabs so domain/visibility rules update instantly.
     if (parsed.data.settings) {
       logAuditEvent({
         projectId: id,
@@ -136,6 +170,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         userEmail: user.email || "",
         metadata: { settings: parsed.data.settings },
       });
+
+      if (updated) {
+        const version = nextVersion();
+        const visibility = await resolveVisibility(updated);
+        const settingsEvent: SettingsEvent = {
+          projectId: id,
+          visibility,
+          version,
+          timestamp: version,
+        };
+        // Instant in-process broadcast on a dedicated settings channel
+        getEventBus().emit(`settings:${id}`, settingsEvent);
+        // Persist for SSE replay on reconnect
+        redisSet(`settings:event:${id}`, settingsEvent, EVENT_STORE_TTL).catch((e) =>
+          console.warn(`[Project] Redis SET failed for settings:event:${id}:`, e)
+        );
+      }
     }
 
     return success(updated);
@@ -172,6 +223,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     // Clean up Redis cache
     redisDel(`decide:${id}`).catch(() => {});
     redisDel(`mode:event:${id}`).catch(() => {});
+    redisDel(`settings:event:${id}`).catch(() => {});
 
     await deleteProject(id);
     return success({ message: "Project deleted" });

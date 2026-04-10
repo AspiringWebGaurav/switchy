@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { getProjectByPublicKey } from "@/lib/services/project.service";
 import { redisGet } from "@/lib/redis/client";
 import { getEventBus } from "@/lib/events/bus";
-import type { ModeEvent, AuditEvent } from "@/lib/events/bus";
+import type { ModeEvent, SettingsEvent, AuditEvent } from "@/lib/events/bus";
 
 export const runtime = "nodejs";
 
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const modeChannel = `mode:${projectId}`;
+  const settingsChannel = `settings:${projectId}`;
   const auditChannel = `audit:${projectId}`;
   const bus = getEventBus();
   const encoder = new TextEncoder();
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         if (closed) return;
         closed = true;
         bus.off(modeChannel, modeHandler);
+        bus.off(settingsChannel, settingsHandler);
         bus.off(auditChannel, auditHandler);
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
@@ -79,6 +81,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
 
+      function settingsHandler(event: SettingsEvent) {
+        // Broadcast as a dedicated `settings` SSE event type so clients can
+        // update domain rules / devOverlayEnabled without a mode change.
+        write(
+          `event: settings\n` +
+            `id: ${event.version}\n` +
+            `data: ${JSON.stringify(event)}\n\n`
+        );
+      }
+
       function auditHandler(event: AuditEvent) {
         write(
           `event: audit\n` +
@@ -101,11 +113,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
         { once: true }
       );
 
-      // Catch-up replay on reconnect via Last-Event-ID (mode events only)
+      // Catch-up replay on reconnect via Last-Event-ID (mode + settings events)
       const lastEventIdHeader = request.headers.get("last-event-id");
       if (lastEventIdHeader) {
         const lastId = parseInt(lastEventIdHeader, 10);
         if (!isNaN(lastId) && lastId > 0) {
+          // Replay last mode event if newer
           redisGet<ModeEvent>(`mode:event:${projectId}`)
             .then((cached) => {
               if (cached && cached.version > lastId) {
@@ -115,11 +128,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
             .catch(() => {
               /* Redis unavailable — skip catch-up, next live event will correct */
             });
+
+          // Replay last settings event if newer
+          redisGet<SettingsEvent>(`settings:event:${projectId}`)
+            .then((cached) => {
+              if (cached && cached.version > lastId) {
+                settingsHandler(cached);
+              }
+            })
+            .catch(() => {
+              /* Redis unavailable — skip catch-up */
+            });
         }
       }
 
       // Subscribe to live event bus — zero polling
       bus.on(modeChannel, modeHandler);
+      bus.on(settingsChannel, settingsHandler);
       bus.on(auditChannel, auditHandler);
 
       // Heartbeat every 25 s — keeps proxy/CDN from closing idle connections

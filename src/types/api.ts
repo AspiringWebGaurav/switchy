@@ -5,7 +5,8 @@ export interface ApiResponse<T = unknown> {
 }
 
 export interface VisibilityConfig {
-  devOverlayEnabled: boolean;
+  devOverlayEnabled?: boolean | null;
+  devBlocklist: string[];
   domainAllowlist: string[];
   domainBlocklist: string[];
 }

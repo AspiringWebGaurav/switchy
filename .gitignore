@@ -49,3 +49,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Old dev reference folder (local only, not for deployment)
+switchy-workins stable-old-dev-refrence only/

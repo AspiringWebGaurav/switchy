@@ -2,6 +2,16 @@
   "use strict";
 
   var script = document.currentScript;
+  if (!script) {
+    var scripts = document.getElementsByTagName("script");
+    for (var i = 0; i < scripts.length; i++) {
+      var s = scripts[i];
+      if (s.src && s.src.indexOf("switchy.js") !== -1 && s.src.indexOf("project=") !== -1) {
+        script = s;
+        break;
+      }
+    }
+  }
   if (!script) return;
 
   var src = script.getAttribute("src") || "";
@@ -29,11 +39,11 @@
   var inFallback = false;
   var _removeTimer = null;
   var _debugBadge = null;
-  var _visibilityConfig = null; // cached visibility settings
+  var _visibilityConfig = null; // cached resolved visibility settings
 
   // ── Debug mode ─────────────────────────────────────────────────────────────
   var DEBUG = false;
-  try { DEBUG = localStorage.getItem('switchy_debug') === 'true'; } catch(e) {}
+  try { DEBUG = localStorage.getItem('switchy_debug') === 'true'; } catch (e) { }
 
   function log() {
     if (DEBUG) console.log.apply(console, ['[Switchyy]'].concat([].slice.call(arguments)));
@@ -42,41 +52,93 @@
   // ── Environment detection ──────────────────────────────────────────────────
   function isDevEnvironment(hostname) {
     return hostname === 'localhost' ||
-           hostname === '127.0.0.1' ||
-           /^192\.168\.\d+\.\d+$/.test(hostname) ||
-           /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
-           /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname) ||
-           hostname.indexOf('.local') === hostname.length - 6 ||
-           hostname.indexOf('.localhost') === hostname.length - 10;
+      hostname === '127.0.0.1' ||
+      /^192\.168\.\d+\.\d+$/.test(hostname) ||
+      /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname) ||
+      hostname.indexOf('.local') === hostname.length - 6 ||
+      hostname.indexOf('.localhost') === hostname.length - 10;
   }
 
   function matchDomain(hostname, pattern) {
     if (pattern.indexOf('*.') === 0) {
       var suffix = pattern.slice(1); // .example.com
       return hostname.indexOf(suffix) === hostname.length - suffix.length ||
-             hostname === pattern.slice(2);
+        hostname === pattern.slice(2);
     }
     return hostname === pattern;
   }
 
+  // ── Dev URL matching ───────────────────────────────────────────────────────
+  // Entries can be "localhost", "localhost:3000", "staging.example.com", "*.staging.example.com"
+  function matchDevUrl(hostname, portStr, pattern) {
+    var lastColon = pattern.lastIndexOf(':');
+    if (lastColon > 0) {
+      var tail = pattern.slice(lastColon + 1);
+      if (/^\d+$/.test(tail)) {
+        // Pattern includes an explicit port — match both hostname AND port
+        var patternHost = pattern.slice(0, lastColon);
+        return matchDomain(hostname, patternHost) && portStr === tail;
+      }
+    }
+    // No port in pattern — match hostname at any port
+    return matchDomain(hostname, pattern);
+  }
+
   // ── Centralized visibility decision ────────────────────────────────────────
+  //
+  // Dev overlay behavior contract:
+  //   1. On dev/localhost: overlay is SHOWN by default (no configuration needed)
+  //   2. devBlocklist entries suppress it on specific hostname[:port] patterns — granular opt-out
+  //   3. devEnabled === false → disable overlay globally for all dev/localhost URLs
+  //   4. Production domains: subject to allowlist/blocklist rules; devBlocklist has no effect
+  //
   function shouldRenderOverlay(config) {
     var hostname = window.location.hostname;
-    var isDev = isDevEnvironment(hostname);
-    var visibility = (config && config.visibility) || {};
-    var devEnabled = visibility.devOverlayEnabled === true; // explicit true required
-    var allowlist = visibility.domainAllowlist || [];
-    var blocklist = visibility.domainBlocklist || [];
 
-    log('hostname:', hostname, 'isDev:', isDev, 'devEnabled:', devEnabled, 'allowlist:', allowlist, 'blocklist:', blocklist);
-
-    // Hard safety: dev blocked unless explicitly enabled
-    if (isDev && !devEnabled) {
-      log('BLOCKED: dev environment, devOverlayEnabled=false');
-      return false;
+    // Always show the "Integration Detected" setup success overlay
+    if (config && config.pending) {
+      log('ALLOWED: pending overlay always allowed for setup verification');
+      return true;
     }
 
-    // Blocklist check first (takes priority) - if hostname matches, block it
+    var isDev = isDevEnvironment(hostname);
+    var visibility = (config && config.visibility) || _visibilityConfig || {};
+    var devEnabled = visibility.devOverlayEnabled;
+    var devBlocklist = visibility.devBlocklist || [];
+    var allowlist = visibility.domainAllowlist || [];
+    var blocklist = visibility.domainBlocklist || [];
+    var port = window.location.port; // may be "" for default ports
+
+    log('hostname:', hostname, 'port:', port, 'isDev:', isDev,
+        'devEnabled:', devEnabled, 'devBlocklist:', devBlocklist,
+        'allowlist:', allowlist, 'blocklist:', blocklist);
+
+    if (isDev) {
+      // Step 1: Check dev suppression list (most granular — checked first)
+      if (devBlocklist.length > 0) {
+        for (var i = 0; i < devBlocklist.length; i++) {
+          if (matchDevUrl(hostname, port, devBlocklist[i])) {
+            log('BLOCKED: dev URL matched in devBlocklist:', devBlocklist[i]);
+            return false;
+          }
+        }
+      }
+
+      // Step 2: Check global dev disable toggle
+      if (devEnabled === false) {
+        log('BLOCKED: dev overlay globally disabled (devEnabled=false)');
+        return false;
+      }
+
+      // Step 3: Default — show overlay on dev/localhost
+      log('ALLOWED: dev environment, overlay shown by default');
+      return true;
+    }
+
+    // Production domain rules ─────────────────────────────────────────────────
+
+    // Blocklist (takes priority over allowlist)
     if (blocklist.length > 0) {
       for (var i = 0; i < blocklist.length; i++) {
         if (matchDomain(hostname, blocklist[i])) {
@@ -86,7 +148,7 @@
       }
     }
 
-    // Allowlist check (if non-empty, hostname must match)
+    // Allowlist (if non-empty, hostname must match to show)
     if (allowlist.length > 0) {
       var matched = false;
       for (var i = 0; i < allowlist.length; i++) {
@@ -120,18 +182,18 @@
       }
       log('Using cached config (age:', Math.round((Date.now() - cached.ts) / 1000) + 's)');
       return cached.data;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
   }
 
   function setCachedConfig(data) {
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
       log('Config cached');
-    } catch(e) {}
+    } catch (e) { }
   }
 
   function clearCachedConfig() {
-    try { sessionStorage.removeItem(CACHE_KEY); } catch(e) {}
+    try { sessionStorage.removeItem(CACHE_KEY); } catch (e) { }
   }
 
   // ── Layout system ─────────────────────────────────────────────────────────
@@ -380,6 +442,32 @@
     }, 15000);
   }
 
+  // ── Re-evaluate current overlay when visibility settings change ────────────
+  // Called when a `settings` SSE event arrives with updated domain/dev rules.
+  function reEvaluateVisibility() {
+    var existing = document.getElementById("switchy-overlay");
+    var allowed = shouldRenderOverlay({ mode: currentMode, visibility: _visibilityConfig });
+
+    if (!allowed && existing) {
+      // Newly blocked — fade out the overlay
+      log('Re-eval: overlay now blocked, fading out');
+      fadeOutOverlay(existing);
+    } else if (allowed && !existing && currentMode && currentMode !== 'live' && currentMode !== null) {
+      // Newly allowed — re-fetch to get fresh data and show overlay
+      log('Re-eval: overlay now allowed, re-fetching decide');
+      clearCachedConfig();
+      fetch(decideEndpoint, { cache: "no-store" })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          if (json.data) {
+            setCachedConfig(json.data);
+            applyModeIfAllowed(json.data);
+          }
+        })
+        .catch(function () { /* silent */ });
+    }
+  }
+
   // ── SSE connection ─────────────────────────────────────────────────────────
   function connectSSE() {
     if (evtSource) { evtSource.close(); evtSource = null; }
@@ -389,11 +477,13 @@
     evtSource.addEventListener("mode", function (e) {
       try {
         var data = JSON.parse(e.data);
-        // Merge with cached visibility if SSE doesn't include it
-        if (!data.visibility && _visibilityConfig) {
+        // If the mode event carries visibility, update our cached config
+        if (data.visibility) {
+          _visibilityConfig = data.visibility;
+        } else if (_visibilityConfig) {
           data.visibility = _visibilityConfig;
         }
-        // Update cache with new mode data
+        // Update session cache with new mode + any new visibility
         var cached = getCachedConfig();
         if (cached) {
           cached.mode = data.mode;
@@ -410,6 +500,34 @@
       }
     });
 
+    // Handle settings-only changes — domain rules / Testing Mode toggled in dashboard
+    evtSource.addEventListener("settings", function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        if (!data.visibility) return;
+
+        log('Settings SSE received:', data.visibility);
+
+        // Update cached visibility
+        _visibilityConfig = data.visibility;
+
+        // Clear sessionStorage so next decide fetch gets fresh data
+        clearCachedConfig();
+
+        // Update the cached session config visibility if present
+        var cached = getCachedConfig();
+        if (cached) {
+          cached.visibility = data.visibility;
+          setCachedConfig(cached);
+        }
+
+        // Re-evaluate whether current overlay should still be shown
+        reEvaluateVisibility();
+      } catch (err) {
+        console.error("[Switchyy] SSE settings parse error:", err);
+      }
+    });
+
     evtSource.onopen = function () {
       // Reset stale state on reconnect — server is source of truth
       lastVersion = 0;
@@ -420,7 +538,7 @@
       if (window.__SWITCHY_TEST__) {
         window.__SWITCHY_SSE_READY__ = true;
       }
-      // Always re-sync with server on reconnect
+      // Always re-sync with server on reconnect to get fresh config including visibility
       fetch(decideEndpoint, { cache: "no-store" })
         .then(function (res) { return res.json(); })
         .then(function (json) {
@@ -455,15 +573,15 @@
   // ── Guarded applyMode — respects visibility ────────────────────────────────
   function applyModeIfAllowed(data) {
     if (!data) return;
-    
-    // Store visibility config for SSE updates
+
+    // Store visibility config for SSE updates that don't carry it
     if (data.visibility) {
       _visibilityConfig = data.visibility;
     }
-    
+
     // Check visibility rules
     if (!shouldRenderOverlay(data)) {
-      // Still update state but don't render
+      // Still update mode tracking but don't render
       if (data.mode === 'live') {
         currentMode = 'live';
         var existing = document.getElementById('switchy-overlay');
@@ -471,7 +589,7 @@
       }
       return;
     }
-    
+
     applyMode(data);
   }
 
@@ -479,28 +597,15 @@
   function init() {
     var hostname = window.location.hostname;
     var isDev = isDevEnvironment(hostname);
-    
+
     log('Init — hostname:', hostname, 'isDev:', isDev);
 
-    // INSTANT PRE-CHECK: if dev, check cache for explicit allow
-    if (isDev) {
-      var cached = getCachedConfig();
-      if (cached) {
-        var visibility = cached.visibility || {};
-        if (visibility.devOverlayEnabled !== true) {
-          log('Dev blocked via cached config — skipping init');
-          return; // EXIT — no overlay, no SSE, no API
-        }
-      } else {
-        // No cache in dev — need to fetch to check settings
-        // But we'll still apply visibility rules after fetch
-        log('Dev environment, no cache — will fetch and check settings');
-      }
-    }
+    // Real-time connections and basic fetch happen for ALL environments uniformly.
+    // Overlay visibility is exclusively controlled by shouldRenderOverlay().
 
     injectStyles();
 
-    // Try session cache first (for non-dev or dev with explicit allow)
+    // Try session cache first
     var cached = getCachedConfig();
     if (cached) {
       log('Applying cached mode:', cached.mode);
@@ -524,8 +629,6 @@
         })
         .catch(function (err) {
           console.error("[Switchyy]", err.message);
-          // On error in dev: remain blocked (safe default)
-          // On error in prod: remain neutral, no UI injection
         });
       connectSSE();
     });

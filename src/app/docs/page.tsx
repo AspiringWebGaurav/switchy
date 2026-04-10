@@ -479,38 +479,28 @@ export default function RootLayout({ children }) {
           <section id="security-settings" className="scroll-mt-20 mb-14">
             <h2 className="text-2xl font-bold text-stone-900 mb-4 pb-3 border-b border-stone-200">Security & Settings</h2>
             <p className="text-base text-stone-700 leading-7 mb-6">
-              Control exactly where and how your overlays appear using strict domain isolation and dedicated test modes.
+              Control exactly where and how your overlays appear using local development testing and suppression features.
             </p>
 
             <div className="space-y-4">
               <div className="rounded-xl border border-stone-200 bg-white p-5">
-                <h4 className="text-sm font-semibold text-stone-900 mb-2">Domain Allowlist & Blocklists</h4>
-                <p className="text-sm text-stone-600 mb-3">
-                  Prevent unauthorized use of your project keys by restricting which domains can render your overlays:
-                </p>
-                <ul className="mt-2 space-y-1 text-sm text-stone-600 ml-4 mb-4">
-                  <li className="flex items-start gap-2">
-                    <ChevronRight size={13} className="text-indigo-400 mt-0.5 shrink-0" />
-                    <span><strong>Allowlist:</strong> If populated, your banners will <em>only</em> load on domains matching the list (e.g. <code>app.yoursite.com</code>).</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <ChevronRight size={13} className="text-indigo-400 mt-0.5 shrink-0" />
-                    <span><strong>Blocklist:</strong> Use this to explicitly ban local testing environments (<code>localhost</code>) or staging sites.</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="rounded-xl border border-stone-200 bg-white p-5">
-                <h4 className="text-sm font-semibold text-stone-900 mb-2">Development Test Overlay</h4>
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Custom Settings & Inheritance</h4>
                 <p className="text-sm text-stone-600">
-                  When integrating Switchyy visually into a new boilerplate, toggle the <strong>Testing Overlay</strong> in your dashboard. This simulates an active custom layout locally to easily adapt our CSS alongside your components before a public release.
+                  By default, any new project inherits its settings globally. Toggling "Custom Settings" to ON within a project unlocks independent granular controls so your development environments act exactly how you want per-project.
                 </p>
               </div>
 
               <div className="rounded-xl border border-stone-200 bg-white p-5">
-                <h4 className="text-sm font-semibold text-stone-900 mb-2">Inheritance vs Custom Scopes</h4>
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Development Overlay Behavior</h4>
                 <p className="text-sm text-stone-600">
-                  By default, any new project strictly inherits your high-level User preferences. Toggling "Use Custom Settings" within a project layout unlocks independent granular domain controls so client A differs entirely from client B simultaneously.
+                  Switchyy is designed to show overlays on local development environments (like <code>localhost</code>) by <strong>default</strong>, so you can easily adapt your app's frontend to our CSS layout during development. If you don't want to see this while coding, simply toggle the <strong>Hide Overlay on Dev Sites</strong> setting to ON to blanket-hide banners across all dev environments.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-stone-200 bg-white p-5">
+                <h4 className="text-sm font-semibold text-stone-900 mb-2">Hide Overlay on Specific Links</h4>
+                <p className="text-sm text-stone-600">
+                  Need granular control? Instead of hiding the overlay on ALL development sites, you can define specific links (like <code>localhost:3000</code> or <code>staging.myapp.com</code>) where the banner should not appear. This guarantees the overlay is suppressed exactly where you need it, without affecting production links or other local servers.
                 </p>
               </div>
             </div>

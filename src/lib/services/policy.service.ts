@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { redisDel, redisSet } from "@/lib/redis/client";
 import { getEventBus } from "@/lib/events/bus";
-import type { ModeEvent } from "@/lib/events/bus";
+import type { ModeEvent, ResolvedVisibility } from "@/lib/events/bus";
 import type { ModePolicy, ModeValue, ModeConfig } from "@/types/policy";
 import { EVENT_STORE_TTL } from "@/config/constants";
 
@@ -30,7 +30,8 @@ export async function updateModePolicy(
   projectId: string,
   uid: string,
   value: ModeValue,
-  config?: Partial<ModeConfig>
+  config?: Partial<ModeConfig>,
+  visibility?: ResolvedVisibility
 ): Promise<ModePolicy> {
   const policyRef = adminDb
     .collection("projects")
@@ -92,7 +93,8 @@ export async function updateModePolicy(
     console.warn(`[Policy] Redis DEL failed for decide:${projectId}`);
   }
 
-  // Build structured event
+  // Build structured event — include visibility so overlay clients don't need
+  // a separate /decide call to learn the current domain/dev rules.
   const version = nextVersion();
   const event: ModeEvent = {
     projectId,
@@ -102,6 +104,7 @@ export async function updateModePolicy(
     redirect: updated.config.redirectUrl,
     version,
     timestamp: version,
+    visibility, // may be undefined if caller didn't resolve it — clients fall back to cached
   };
 
   // Instant in-process broadcast — critical real-time path, must not wait for Redis

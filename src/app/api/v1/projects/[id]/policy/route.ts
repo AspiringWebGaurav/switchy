@@ -1,12 +1,46 @@
 import { NextRequest } from "next/server";
 import { verifySession } from "@/lib/services/auth.service";
 import { getProjectById } from "@/lib/services/project.service";
+import { getUserById } from "@/lib/services/user.service";
 import { getModePolicy, updateModePolicy } from "@/lib/services/policy.service";
 import { updatePolicySchema } from "@/lib/validators/policy";
 import { success, error } from "@/lib/utils/response";
 import { logAuditEvent } from "@/lib/services/audit.service";
+import type { ResolvedVisibility } from "@/lib/events/bus";
+import type { Project } from "@/types/project";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+/** Resolve the effective visibility for a project (project settings → user prefs → defaults). */
+async function resolveVisibility(project: Project): Promise<ResolvedVisibility> {
+  const s = project.settings;
+  const needsUserFallback =
+    s?.devOverlayEnabled === undefined || s?.devOverlayEnabled === null ||
+    s?.devBlocklist === undefined || s?.devBlocklist === null ||
+    s?.domainAllowlist === undefined || s?.domainAllowlist === null ||
+    s?.domainBlocklist === undefined || s?.domainBlocklist === null;
+
+  const owner = needsUserFallback ? await getUserById(project.ownerId) : null;
+
+  return {
+    devOverlayEnabled:
+      s?.devOverlayEnabled !== undefined && s?.devOverlayEnabled !== null
+        ? s.devOverlayEnabled
+        : owner?.preferences?.devOverlayEnabled,
+    devBlocklist:
+      s?.devBlocklist !== undefined && s?.devBlocklist !== null
+        ? s.devBlocklist
+        : (owner?.preferences?.devBlocklist ?? []),
+    domainAllowlist:
+      s?.domainAllowlist !== undefined && s?.domainAllowlist !== null
+        ? s.domainAllowlist
+        : (owner?.preferences?.domainAllowlist ?? []),
+    domainBlocklist:
+      s?.domainBlocklist !== undefined && s?.domainBlocklist !== null
+        ? s.domainBlocklist
+        : (owner?.preferences?.domainBlocklist ?? []),
+  };
+}
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -50,11 +84,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const currentPolicy = await getModePolicy(id);
     const previousMode = currentPolicy?.value;
 
+    // Resolve visibility once so the emitted ModeEvent is self-contained
+    const visibility = await resolveVisibility(project);
+
     const updated = await updateModePolicy(
       id,
       user.uid,
       parsed.data.value,
-      parsed.data.config
+      parsed.data.config,
+      visibility
     );
 
     // Log audit event (fire-and-forget)

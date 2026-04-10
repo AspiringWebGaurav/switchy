@@ -215,7 +215,7 @@
     dot.style.cssText = "width:6px;height:6px;border-radius:50%;background:rgba(34,197,94,0.8);";
     footer.appendChild(dot);
 
-    footer.appendChild(document.createTextNode("Protected by\u00a0"));
+    footer.appendChild(document.createTextNode("Powered & Protected by\u00a0"));
     var a = document.createElement("a");
     a.href = origin;
     a.target = "_blank";
@@ -415,14 +415,14 @@
       var subtitle = document.createElement("p");
       subtitle.style.cssText =
         "margin:0 0 8px;font-size:16px;color:rgba(255,255,255,0.6);line-height:1.5;";
-      subtitle.textContent = "Your Switchyy script is running successfully.";
+      subtitle.textContent = "One-time verification: Detection successful.";
       content.appendChild(subtitle);
 
       // Description
       var desc = document.createElement("p");
       desc.style.cssText =
-        "margin:0;max-width:380px;font-size:14px;color:rgba(255,255,255,0.4);line-height:1.6;";
-      desc.textContent = "This project hasn\u2019t been activated yet. Head to your dashboard to configure and enable your status page.";
+        "margin:0;max-width:420px;font-size:14px;color:rgba(255,255,255,0.4);line-height:1.6;";
+      desc.textContent = "This is the only time you will see this screen. Head to your dashboard to activate your project and enable full control.";
       content.appendChild(desc);
 
       // CTA Button

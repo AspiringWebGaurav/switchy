@@ -1,5 +1,6 @@
 export interface ProjectVisibilitySettings {
   devOverlayEnabled?: boolean | null;   // null = inherit user pref
+  devBlocklist?: string[] | null;        // null = inherit user pref
   domainAllowlist?: string[] | null;    // null = inherit user pref
   domainBlocklist?: string[] | null;    // null = inherit user pref
 }

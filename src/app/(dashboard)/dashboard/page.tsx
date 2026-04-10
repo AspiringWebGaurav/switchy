@@ -23,6 +23,11 @@ interface ProjectWithMode {
   updatedAt: number;
   enabled?: boolean;
   detected?: boolean;
+  settings?: {
+    devOverlayEnabled?: boolean | null;
+    domainAllowlist?: string[] | null;
+    domainBlocklist?: string[] | null;
+  };
 }
 
 type TabId = "overview" | "keys" | "modes" | "templates" | "events" | "settings";
@@ -335,12 +340,11 @@ export default function DashboardPage() {
                     <ProjectEvents project={selectedProject} />
                   )}
                   {activeTab === "settings" && (
-                    <div>
-                      <h2 className="text-lg font-semibold text-zinc-900 mb-1">Banner Settings</h2>
-                      <p className="text-sm text-zinc-500 mb-6">Choose where banners appear for this project</p>
+                    <div className="pt-2">
                       <SettingsContent 
                         type="project" 
                         projectId={selectedProject.id}
+                        initialSettings={selectedProject.settings}
                         onSave={fetchProjects}
                       />
                     </div>

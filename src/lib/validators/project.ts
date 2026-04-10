@@ -10,6 +10,7 @@ export const createProjectSchema = z.object({
 
 export const projectVisibilitySettingsSchema = z.object({
   devOverlayEnabled: z.boolean().nullable().optional(),
+  devBlocklist: z.array(z.string().trim().min(1)).nullable().optional(),
   domainAllowlist: z.array(z.string().trim().min(1)).nullable().optional(),
   domainBlocklist: z.array(z.string().trim().min(1)).nullable().optional(),
 });

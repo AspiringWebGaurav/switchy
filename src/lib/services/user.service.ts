@@ -25,21 +25,23 @@ export async function updateUserPreferences(
 ): Promise<UserPreferences> {
   const userRef = usersRef.doc(uid);
   const userDoc = await userRef.get();
-  
-  if (!userDoc.exists) {
-    throw new Error("User not found");
-  }
 
-  const currentPrefs = (userDoc.data() as User).preferences || {};
+  // User doc should always exist (created via upsertUser on login), but we handle
+  // missing docs gracefully to prevent 500 errors in edge cases (legacy users, testing, etc.)
+  const currentPrefs = userDoc.exists ? ((userDoc.data() as User).preferences || {}) : {};
   const newPrefs: UserPreferences = {
     ...currentPrefs,
     ...preferences,
   };
 
-  await userRef.update({
-    preferences: newPrefs,
-    updatedAt: Date.now(),
-  });
+  // Use set+merge so this works whether the user doc exists or not
+  await userRef.set(
+    {
+      preferences: newPrefs,
+      updatedAt: Date.now(),
+    },
+    { merge: true }
+  );
 
   // Invalidate decision cache for all user's projects
   // (visibility settings affect all projects)

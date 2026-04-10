@@ -38,7 +38,8 @@ export async function getDecision(
       timestamp: Date.now(),
       pending: true,
       visibility: {
-        devOverlayEnabled: owner?.preferences?.devOverlayEnabled ?? false,
+        devOverlayEnabled: owner?.preferences?.devOverlayEnabled,
+        devBlocklist: owner?.preferences?.devBlocklist ?? [],
         domainAllowlist: owner?.preferences?.domainAllowlist ?? [],
         domainBlocklist: owner?.preferences?.domainBlocklist ?? [],
       },
@@ -51,9 +52,10 @@ export async function getDecision(
   const policy = await getModePolicy(projectId);
   if (!policy) return null;
 
-  // Resolve visibility: project > user > default (false)
+  // Resolve visibility: project > user > default
   const needUserFallback = 
     (project.settings?.devOverlayEnabled === undefined || project.settings.devOverlayEnabled === null) ||
+    (project.settings?.devBlocklist === undefined || project.settings.devBlocklist === null) ||
     (project.settings?.domainAllowlist === undefined || project.settings.domainAllowlist === null);
   
   const owner = needUserFallback ? await getUserById(project.ownerId) : null;
@@ -62,7 +64,11 @@ export async function getDecision(
     devOverlayEnabled: 
       (project.settings?.devOverlayEnabled !== undefined && project.settings.devOverlayEnabled !== null)
         ? project.settings.devOverlayEnabled
-        : (owner?.preferences?.devOverlayEnabled ?? false),
+        : owner?.preferences?.devOverlayEnabled,
+    devBlocklist:
+      (project.settings?.devBlocklist !== undefined && project.settings.devBlocklist !== null)
+        ? project.settings.devBlocklist
+        : (owner?.preferences?.devBlocklist ?? []),
     domainAllowlist: 
       (project.settings?.domainAllowlist !== undefined && project.settings.domainAllowlist !== null)
         ? project.settings.domainAllowlist
