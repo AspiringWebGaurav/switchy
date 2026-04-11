@@ -226,6 +226,7 @@
     };
     script.onerror = function () {
       console.error("[Switchyy] Failed to load layout: " + name);
+      if (typeof removeEarlyLock === "function") removeEarlyLock();
       callback(null);
     };
     document.head.appendChild(script);
@@ -264,7 +265,13 @@
       if (el.parentNode) el.parentNode.removeChild(el);
       if (document.documentElement) document.documentElement.classList.remove("switchy-lock");
       if (document.body) document.body.classList.remove("switchy-lock");
+      removeEarlyLock();
     }, 220);
+  }
+
+  function removeEarlyLock() {
+    var lock = document.getElementById("switchy-early-lock");
+    if (lock && lock.parentNode) lock.parentNode.removeChild(lock);
   }
 
   function showOverlay(el) {
@@ -282,7 +289,10 @@
 
     document.body.appendChild(el);
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { el.style.opacity = "1"; });
+      requestAnimationFrame(function () { 
+        el.style.opacity = "1"; 
+        removeEarlyLock();
+      });
     });
   }
 
@@ -343,6 +353,7 @@
       currentMode = "live";
       if (existing) fadeOutOverlay(existing); else removeDebugBadge();
       updateDebugBadge("live", effectiveVersion);
+      removeEarlyLock();
       return;
     }
 
@@ -613,17 +624,21 @@
 
     log('Init — hostname:', hostname, 'isDev:', isDev);
 
-    // Real-time connections and basic fetch happen for ALL environments uniformly.
-    // Overlay visibility is exclusively controlled by shouldRenderOverlay().
-
     injectStyles();
 
-    // Try session cache first
+    var preloadConfig = window.__SWITCHY_PRELOAD || null;
+    if (preloadConfig) {
+      log('Applying preloaded mode:', preloadConfig.mode);
+      applyModeIfAllowed(preloadConfig);
+      connectSSE();
+      return;
+    }
+
     var cached = getCachedConfig();
     if (cached) {
       log('Applying cached mode:', cached.mode);
       applyModeIfAllowed(cached);
-      connectSSE(); // still connect for real-time updates
+      connectSSE();
       return;
     }
 
@@ -638,13 +653,41 @@
           if (json.data) {
             setCachedConfig(json.data);
             applyModeIfAllowed(json.data);
+          } else {
+            removeEarlyLock();
           }
         })
         .catch(function (err) {
           console.error("[Switchyy]", err.message);
+          removeEarlyLock();
         });
       connectSSE();
     });
+  }
+
+  // ── Early Render Locking (Synchronous & Server-Confirmed Only) ──────────────
+  var confirmedConfig = window.__SWITCHY_PRELOAD;
+  if (confirmedConfig) {
+    setCachedConfig(confirmedConfig);
+    if (confirmedConfig.visibility) _visibilityConfig = confirmedConfig.visibility;
+    
+    // Only lock based on server-confirmed status, ignoring stale storage cache
+    if (confirmedConfig.mode !== "live" && shouldRenderOverlay(confirmedConfig)) {
+      var lockStyle = document.createElement("style");
+      lockStyle.id = "switchy-early-lock";
+      lockStyle.textContent = "html { visibility: hidden !important; }";
+      var rootNode = document.head || document.documentElement;
+      if (rootNode) rootNode.appendChild(lockStyle);
+
+      // Global safety fallback: If not unlocked within 3 seconds, force unlock to prevent deadlocks
+      setTimeout(function() {
+        var lock = document.getElementById("switchy-early-lock");
+        if (lock && lock.parentNode) {
+          console.warn("[Switchyy] Rescue timeout elapsed. Forcing visibility unlock.");
+          lock.parentNode.removeChild(lock);
+        }
+      }, 3000);
+    }
   }
 
   // Start when DOM is minimally ready
