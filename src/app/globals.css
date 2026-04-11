@@ -258,29 +258,14 @@ body {
   }
 }
 
-/* ─── Custom Scrollbar (subtle, modern) ─── */
+/* ─── Custom Scrollbar (Hidden, but scrollable) ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
+  display: none;
 }
 
 /* Firefox */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-width: none;
 }
 
 /* Shimmer animation for premium UI effects */

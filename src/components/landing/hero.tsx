@@ -11,7 +11,46 @@ import { FrameworkIcon } from "@/components/ui/framework-icon";
 
 const rotatingWords = ["real-time", "one click", "zero deploys", "instantly"];
 
-export function LandingHero({ children }: { children?: React.ReactNode }) {
+export function HomeBackground({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex w-full flex-col overflow-hidden bg-gradient-to-b from-indigo-50/50 via-violet-50/20 via-30% to-white -mt-14 pt-14">
+      {/* Animated grid background - covers full page edge-to-edge */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+      {/* Enhanced background gradients */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 0.6, 0.5]
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-indigo-200/60 to-violet-200/40 blur-3xl opacity-50" 
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.15, 1],
+            opacity: [0.4, 0.5, 0.4]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute -bottom-40 left-0 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-violet-200/50 to-pink-200/30 blur-3xl opacity-50" 
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.4, 0.3]
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-gradient-to-r from-blue-200/30 to-indigo-200/30 blur-3xl opacity-50" 
+        />
+      </div>
+      
+      {children}
+    </div>
+  );
+}
+
+export function LandingHero() {
   const router = useRouter();
   const { user } = useAuth();
   const { openLogin } = useLoginModal();
@@ -25,10 +64,7 @@ export function LandingHero({ children }: { children?: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-indigo-50/50 via-violet-50/20 via-30% to-white -mt-14 pt-14">
-      {/* Animated grid background - covers full page */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_40%,transparent_100%)]" />
-
+    <>
       {/* Hero */}
       <div className="relative z-10 flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-6 text-center">
         <motion.div
@@ -198,34 +234,6 @@ export function LandingHero({ children }: { children?: React.ReactNode }) {
         </motion.div>
       </div>
 
-      {/* Enhanced background gradients */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.1, 1],
-            opacity: [0.5, 0.6, 0.5]
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-indigo-200/60 to-violet-200/40 blur-3xl" 
-        />
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.15, 1],
-            opacity: [0.4, 0.5, 0.4]
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute -bottom-40 left-0 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-violet-200/50 to-pink-200/30 blur-3xl" 
-        />
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.4, 0.3]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-gradient-to-r from-blue-200/30 to-indigo-200/30 blur-3xl" 
-        />
-      </div>
-      {children}
-    </div>
+    </>
   );
 }
