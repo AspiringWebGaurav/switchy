@@ -24,7 +24,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2.5 group">
+            <Link href="/" aria-label="Switchyy Home" className="inline-flex items-center gap-2.5 group">
               <svg viewBox="0 0 32 32" fill="none" className="h-8 w-8 transition-transform group-hover:scale-105">
                 <defs>
                   <linearGradient id="footerLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -52,8 +52,6 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    target="_blank" 
-                    rel="noopener noreferrer"
                     className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
                   >
                     {link.label}
@@ -71,8 +69,6 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    target="_blank" 
-                    rel="noopener noreferrer"
                     className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
                   >
                     {link.label}
@@ -90,12 +86,10 @@ export function Footer() {
             </p>
             <Link
               href="/dashboard"
-              target="_blank" 
-              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
             >
               Go to Dashboard
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
@@ -110,7 +104,7 @@ export function Footer() {
             © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
           <div className="flex items-center gap-5 text-xs">
-            <Link href="/docs" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <Link href="/docs" className="text-zinc-400 hover:text-zinc-600 transition-colors">
               Docs
             </Link>
             <a

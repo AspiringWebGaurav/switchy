@@ -44,7 +44,7 @@ export function LandingHero({ children }: { children?: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-5 inline-flex items-center gap-2 rounded-full border border-indigo-200/60 bg-gradient-to-r from-indigo-50 to-violet-50 px-3 py-1.5 text-sm text-indigo-700 shadow-sm shadow-indigo-100 hover:shadow-md hover:border-indigo-300/80 transition-all cursor-default"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white animate-pulse">
+            <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white animate-pulse">
               <Sparkles size={10} />
             </span>
             <span className="font-medium">Real-time control, zero redeployments</span>

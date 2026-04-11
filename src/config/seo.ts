@@ -1,4 +1,4 @@
-export const SITE_URL = "https://switchyy.vercel.app";
+export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://switchyy.eu.cc";
 export const SITE_NAME = "Switchyy";
 export const SITE_DESCRIPTION =
   "Real-time feature flags and mode control for your apps. Switch between live, maintenance, and custom modes instantly — no redeployments needed.";
