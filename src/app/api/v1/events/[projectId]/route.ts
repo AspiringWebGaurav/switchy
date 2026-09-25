@@ -5,6 +5,7 @@ import { getEventBus } from "@/lib/events/bus";
 import type { ModeEvent, SettingsEvent, AuditEvent } from "@/lib/events/bus";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const stream = new ReadableStream({
     start(controller) {
       let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+      let maxLifetimeTimer: ReturnType<typeof setTimeout> | null = null;
       let closed = false;
 
       function cleanup() {
@@ -53,6 +55,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
+        }
+        if (maxLifetimeTimer) {
+          clearTimeout(maxLifetimeTimer);
+          maxLifetimeTimer = null;
         }
       }
 
@@ -142,6 +148,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
+      // Instruct client to retry after 1500ms on rotation/disconnect
+      write("retry: 1500\n\n");
+
       // Subscribe to live event bus — zero polling
       bus.on(modeChannel, modeHandler);
       bus.on(settingsChannel, settingsHandler);
@@ -149,6 +158,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
       // Heartbeat every 25 s — keeps proxy/CDN from closing idle connections
       heartbeatTimer = setInterval(() => write(":\n\n"), 25000);
+
+      // Gracefully terminate stream at 45s before Vercel's 60s hard kill (avoids 504 Gateway Timeout).
+      // Browser EventSource reconnects seamlessly and catches up via Last-Event-ID.
+      maxLifetimeTimer = setTimeout(() => {
+        cleanup();
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
+      }, 45000);
     },
     cancel() {
       cleanupRef();

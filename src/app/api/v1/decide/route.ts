@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
     }
 
     const res = withCors(success(decision));
-    res.headers.set("Cache-Control", "no-store");
+    // Cache at Vercel Edge for 5 seconds to prevent serverless function quota burning on high-traffic sites
+    res.headers.set("Cache-Control", "public, max-age=0, s-maxage=5, stale-while-revalidate=10");
     res.headers.set(
       "X-RateLimit-Remaining",
       rateLimit.remaining.toString()

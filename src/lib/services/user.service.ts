@@ -1,14 +1,20 @@
 import { adminDb } from "@/lib/firebase/admin";
-import { redisDel } from "@/lib/redis/client";
+import { redisDel, redisGet, redisSet } from "@/lib/redis/client";
 import type { User, UserPreferences } from "@/types/user";
 
 const usersRef = adminDb.collection("users");
 
 export async function getUserById(uid: string): Promise<User | null> {
+  const cacheKey = `user:${uid}`;
+  const cached = await redisGet<User>(cacheKey);
+  if (cached) return cached;
+
   try {
     const doc = await usersRef.doc(uid).get();
     if (!doc.exists) return null;
-    return doc.data() as User;
+    const user = doc.data() as User;
+    await redisSet(cacheKey, user, 120); // 2-minute TTL
+    return user;
   } catch {
     return null;
   }
@@ -53,6 +59,7 @@ export async function updateUserPreferences(
   const invalidations = projectsSnapshot.docs.map((doc) =>
     redisDel(`decide:${doc.id}`)
   );
+  invalidations.push(redisDel(`user:${uid}`));
   await Promise.all(invalidations);
 
   return newPrefs;

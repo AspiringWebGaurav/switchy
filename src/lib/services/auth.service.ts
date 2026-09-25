@@ -1,6 +1,8 @@
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/config/constants";
 import { cookies } from "next/headers";
+import { getUserById } from "@/lib/services/user.service";
+import { redisDel } from "@/lib/redis/client";
 import type { User } from "@/types/user";
 
 export async function createSessionCookie(idToken: string): Promise<string> {
@@ -19,11 +21,7 @@ export async function verifySession(): Promise<User | null> {
     if (!sessionCookie) return null;
 
     const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-
-    if (!userDoc.exists) return null;
-
-    return userDoc.data() as User;
+    return await getUserById(decoded.uid);
   } catch {
     return null;
   }
@@ -66,4 +64,7 @@ export async function upsertUser(decoded: {
   if (!userDoc.data()?.createdAt) {
     await userRef.update({ createdAt: now });
   }
+
+  // Invalidate cached user profile
+  await redisDel(`user:${decoded.uid}`);
 }

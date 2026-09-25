@@ -191,58 +191,93 @@ export function ProjectEvents({ project }: ProjectEventsProps) {
     loadInitial();
   }, [fetchLogs]);
 
-  // SSE subscription for real-time events
+  // SSE subscription for real-time events with visibility suspension
   useEffect(() => {
     if (!project.publicKey || connectionState === "waiting") return;
 
     const eventsUrl = `/api/v1/events/${project.id}?key=${encodeURIComponent(project.publicKey)}`;
-    const evtSource = new EventSource(eventsUrl);
-    eventSourceRef.current = evtSource;
+    let evtSource: EventSource | null = null;
+    let isDisposed = false;
 
-    evtSource.onopen = () => {
-      setSseConnected(true);
-    };
-
-    evtSource.onerror = () => {
-      setSseConnected(false);
-    };
-
-    evtSource.addEventListener("audit", (e: MessageEvent) => {
+    function connectSSE() {
+      if (isDisposed || evtSource) return;
       try {
-        const data = JSON.parse(e.data) as LiveEvent;
-        
-        // Deduplicate by ID
-        if (seenIdsRef.current.has(data.id)) return;
-        seenIdsRef.current.add(data.id);
-        
-        const newEvent: LiveEvent = {
-          ...data,
-          isLive: true,
+        const source = new EventSource(eventsUrl);
+        evtSource = source;
+        eventSourceRef.current = source;
+
+        source.onopen = () => {
+          setSseConnected(true);
         };
-        
-        // Insert in correct position by version (descending)
-        setEvents(prev => {
-          const updated = [...prev];
-          let insertIndex = 0;
-          for (let i = 0; i < updated.length; i++) {
-            if (newEvent.version > updated[i].version) {
-              insertIndex = i;
-              break;
-            }
-            insertIndex = i + 1;
+
+        source.onerror = () => {
+          setSseConnected(false);
+        };
+
+        source.addEventListener("audit", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data) as LiveEvent;
+            
+            // Deduplicate by ID
+            if (seenIdsRef.current.has(data.id)) return;
+            seenIdsRef.current.add(data.id);
+            
+            const newEvent: LiveEvent = {
+              ...data,
+              isLive: true,
+            };
+            
+            // Insert in correct position by version (descending)
+            setEvents(prev => {
+              const updated = [...prev];
+              let insertIndex = 0;
+              for (let i = 0; i < updated.length; i++) {
+                if (newEvent.version > updated[i].version) {
+                  insertIndex = i;
+                  break;
+                }
+                insertIndex = i + 1;
+              }
+              updated.splice(insertIndex, 0, newEvent);
+              return updated;
+            });
+          } catch {
+            // Ignore parse errors
           }
-          updated.splice(insertIndex, 0, newEvent);
-          return updated;
         });
       } catch {
-        // Ignore parse errors
+        setSseConnected(false);
       }
-    });
+    }
+
+    function disconnectSSE() {
+      if (evtSource) {
+        evtSource.close();
+        evtSource = null;
+        eventSourceRef.current = null;
+      }
+      setSseConnected(false);
+    }
+
+    // Connect initially if visible
+    if (typeof document === "undefined" || !document.hidden) {
+      connectSSE();
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        disconnectSSE();
+      } else {
+        connectSSE();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      evtSource.close();
-      eventSourceRef.current = null;
-      setSseConnected(false);
+      isDisposed = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      disconnectSSE();
     };
   }, [project.id, project.publicKey, connectionState]);
 

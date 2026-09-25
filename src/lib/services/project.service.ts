@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { generatePublicKey } from "@/lib/utils/keys";
 import { DEFAULT_MODE_POLICY } from "@/config/policies";
-import { redisDel } from "@/lib/redis/client";
+import { redisDel, redisGet, redisSet } from "@/lib/redis/client";
 import type { Project } from "@/types/project";
 import type { ModePolicy } from "@/types/policy";
 
@@ -47,10 +47,16 @@ export async function getProjectsByOwner(ownerId: string): Promise<Project[]> {
 export async function getProjectById(
   projectId: string
 ): Promise<Project | null> {
+  const cacheKey = `project:${projectId}`;
+  const cached = await redisGet<Project>(cacheKey);
+  if (cached) return cached;
+
   try {
     const doc = await projectsRef.doc(projectId).get();
     if (!doc.exists) return null;
-    return doc.data() as Project;
+    const project = doc.data() as Project;
+    await redisSet(cacheKey, project, 300); // 5-minute TTL
+    return project;
   } catch {
     return null;
   }
@@ -74,7 +80,8 @@ export async function updateProject(
     updatedAt: Date.now(),
   });
 
-  // Invalidate decision cache when settings change
+  // Invalidate project and decision caches when data changes
+  await redisDel(`project:${projectId}`);
   if (data.enabled !== undefined || data.activeTemplateId !== undefined || data.settings !== undefined) {
     await redisDel(`decide:${projectId}`);
   }
@@ -91,6 +98,7 @@ export async function deleteProject(projectId: string): Promise<void> {
 
   await batch.commit();
 
-  // Invalidate decision cache
+  // Invalidate cached project and decision
+  await redisDel(`project:${projectId}`);
   await redisDel(`decide:${projectId}`);
 }

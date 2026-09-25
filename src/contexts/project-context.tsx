@@ -114,6 +114,7 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     if (connectionState !== "waiting" || loading) return;
 
     const poll = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       try {
         const res = await fetch(`/api/v1/projects/${projectId}`);
         if (!res.ok) return;
@@ -158,6 +159,7 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     let evtSource: EventSource | null = null;
     let fallbackTimer: ReturnType<typeof setInterval> | null = null;
     let sseFailStart: number | null = null;
+    let isDisposed = false;
 
     function stopFallback() {
       if (fallbackTimer) {
@@ -167,8 +169,9 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     }
 
     function startFallback() {
-      if (fallbackTimer) return;
+      if (fallbackTimer || isDisposed) return;
       fallbackTimer = setInterval(async () => {
+        if (typeof document !== "undefined" && document.hidden) return;
         try {
           const res = await fetch(`/api/v1/projects/${projectId}/policy`, {
             cache: "no-store",
@@ -186,41 +189,75 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       }, 15000);
     }
 
-    evtSource = new EventSource(eventsUrl);
-
-    evtSource.addEventListener("mode", (e: MessageEvent) => {
+    function connectSSE() {
+      if (isDisposed || evtSource) return;
       try {
-        const data = JSON.parse(e.data);
-        if (!data.version || data.version <= sseVersionRef.current) return;
-        sseVersionRef.current = data.version;
-        setModeState(data.mode);
-        setConfig({
-          message: data.message,
-          buttonText: data.buttonText,
-          redirectUrl: data.redirect,
+        const source = new EventSource(eventsUrl);
+        evtSource = source;
+
+        source.addEventListener("mode", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (!data.version || data.version <= sseVersionRef.current) return;
+            sseVersionRef.current = data.version;
+            setModeState(data.mode);
+            setConfig({
+              message: data.message,
+              buttonText: data.buttonText,
+              redirectUrl: data.redirect,
+            });
+          } catch {
+            /* silent */
+          }
         });
+
+        source.onopen = () => {
+          sseFailStart = null;
+          stopFallback();
+        };
+
+        source.onerror = () => {
+          if (!sseFailStart) sseFailStart = Date.now();
+          if (Date.now() - sseFailStart > 30000) {
+            source.close();
+            if (evtSource === source) evtSource = null;
+            startFallback();
+          }
+        };
       } catch {
-        /* silent */
-      }
-    });
-
-    evtSource.onopen = () => {
-      sseFailStart = null;
-      stopFallback();
-    };
-
-    evtSource.onerror = () => {
-      if (!sseFailStart) sseFailStart = Date.now();
-      if (Date.now() - sseFailStart > 30000) {
-        evtSource?.close();
-        evtSource = null;
         startFallback();
       }
+    }
+
+    function disconnectSSE() {
+      if (evtSource) {
+        evtSource.close();
+        evtSource = null;
+      }
+      stopFallback();
+    }
+
+    // Connect initially only if page is visible
+    if (typeof document === "undefined" || !document.hidden) {
+      connectSSE();
+    }
+
+    // Suspend SSE when tab is in background to save Vercel serverless GB-hours;
+    // seamlessly reconnects and catches up via Last-Event-ID when user returns.
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        disconnectSSE();
+      } else {
+        connectSSE();
+      }
     };
 
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
-      evtSource?.close();
-      stopFallback();
+      isDisposed = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      disconnectSSE();
     };
   }, [project?.publicKey, projectId]);
 
