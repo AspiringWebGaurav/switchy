@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Code2, Key, Search, X, Loader2, AlertCircle, Sparkles, Globe } from "lucide-react";
+import { Code2, Key, Search, X, Loader2, AlertCircle, Sparkles, Globe, Eye, EyeOff } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { frameworks, getSnippet, type FrameworkId } from "@/config/frameworks";
@@ -26,6 +26,7 @@ export function ProjectKeys({ project }: ProjectKeysProps) {
   const [appUrl, setAppUrl] = useState("");
   const [framework, setFramework] = useState<FrameworkId>("html");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   const frameworkLabels = useMemo(() => frameworks.map(f => f.label), []);
   const search = useSmartSearch({
@@ -71,12 +72,39 @@ export function ProjectKeys({ project }: ProjectKeysProps) {
     setAppUrl(window.location.origin);
   }, []);
 
-  const scriptUrl = `${appUrl}/switchy.js?key=${project.publicKey}&project=${project.id}`;
+  const maskedKey = "pk_" + "•".repeat(20);
+  const activeKeyForDisplay = showKey ? project.publicKey : maskedKey;
+
+  const displayScriptUrl = `${appUrl}/switchy.js?key=${activeKeyForDisplay}&project=${project.id}`;
+  const realScriptUrl = `${appUrl}/switchy.js?key=${project.publicKey}&project=${project.id}`;
   const apiEndpoint = `${appUrl}/api/v1/decide/${project.id}`;
   const currentFramework = frameworks.find(f => f.id === framework)!;
-  const currentSnippet = getSnippet(framework, scriptUrl);
+  const currentSnippet = getSnippet(framework, displayScriptUrl);
+  const realSnippet = getSnippet(framework, realScriptUrl);
 
   const apiSnippet = `// .env
+SWITCHY_API_URL="${appUrl}"
+SWITCHY_PROJECT_ID="${project.id}"
+SWITCHY_PUBLIC_KEY="${activeKeyForDisplay}"
+
+// fetch-mode.js
+const res = await fetch(
+  \`\${process.env.SWITCHY_API_URL}/api/v1/decide/\${process.env.SWITCHY_PROJECT_ID}\`,
+  { headers: { "x-api-key": process.env.SWITCHY_PUBLIC_KEY } }
+);
+const { mode } = await res.json();
+// current mode: "${project.mode}"
+
+switch (mode) {
+  case "${project.mode}":
+    // active — handle current mode
+    break;
+  default:
+    // fallback for any other mode
+    break;
+}`;
+
+  const realApiSnippet = `// .env
 SWITCHY_API_URL="${appUrl}"
 SWITCHY_PROJECT_ID="${project.id}"
 SWITCHY_PUBLIC_KEY="${project.publicKey}"
@@ -109,10 +137,26 @@ switch (mode) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">Public Key</h3>
-              <code className="text-sm font-mono text-zinc-500">{project.publicKey}</code>
+              <div className="flex items-center gap-2 mt-0.5">
+                <code className={`text-sm font-mono transition-all ${showKey ? "text-zinc-700" : "text-zinc-500 font-semibold tracking-wider"}`}>
+                  {activeKeyForDisplay}
+                </code>
+              </div>
             </div>
           </div>
-          <CopyButton value={project.publicKey} variant="outline" />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              aria-label={showKey ? "Hide public key" : "Show public key"}
+              title={showKey ? "Hide public key" : "Show public key"}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+            >
+              {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+              <span>{showKey ? "Hide" : "Reveal"}</span>
+            </button>
+            <CopyButton value={project.publicKey} variant="outline" />
+          </div>
         </div>
       </div>
 
@@ -237,7 +281,7 @@ switch (mode) {
               {currentSnippet}
             </pre>
             <div className="absolute top-2 right-2">
-              <CopyButton value={currentSnippet} variant="outline" />
+              <CopyButton value={realSnippet} variant="outline" />
             </div>
           </div>
         </div>
@@ -267,7 +311,7 @@ switch (mode) {
               {apiSnippet}
             </pre>
             <div className="absolute top-2 right-2">
-              <CopyButton value={apiSnippet} variant="outline" />
+              <CopyButton value={realApiSnippet} variant="outline" />
             </div>
           </div>
         </div>

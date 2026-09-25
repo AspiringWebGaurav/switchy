@@ -13,6 +13,7 @@ import { ProjectModesWithContext } from "@/components/dashboard/tabs/modes-with-
 import { ProjectEvents } from "@/components/dashboard/tabs/events";
 import { ProjectTemplates } from "@/components/dashboard/tabs/templates";
 import { SettingsContent } from "@/components/dashboard/settings-content";
+import { MaskedKey } from "@/components/ui/masked-key";
 
 interface ProjectWithMode {
   id: string;
@@ -283,13 +284,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-zinc-500">Public Key:</span>
-                    <code className="text-sm font-mono text-zinc-700">{selectedProject.publicKey}</code>
-                    <button
-                      onClick={() => handleCopy(selectedProject.publicKey, "key")}
-                      className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
-                    >
-                      {copiedField === "key" ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    </button>
+                    <MaskedKey value={selectedProject.publicKey} variant="inline" />
                   </div>
                 </div>
               </div>

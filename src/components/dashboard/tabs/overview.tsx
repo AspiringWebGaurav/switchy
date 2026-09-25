@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wifi, Sliders, Key, Trash2, Power, Check, Zap, Copy, CheckCircle2, RotateCw, Code2, ChevronLeft, ChevronRight, Search, X, Loader2, AlertCircle, Sparkles } from "lucide-react";
-import { CopyButton } from "@/components/ui/copy-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { frameworks, getSnippet, type FrameworkId } from "@/config/frameworks";
 import { FrameworkIcon } from "@/components/ui/framework-icon";
 import { useSmartSearch } from "@/hooks/use-smart-search";
+import { MaskedKey } from "@/components/ui/masked-key";
 
 interface Project {
   id: string;
@@ -553,14 +553,13 @@ export function ProjectOverview({ project, onRefresh, onNavigateToModes }: Proje
           className="rounded-xl border border-zinc-200 bg-white p-5"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 shrink-0">
               <Key size={20} className="text-amber-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm text-zinc-500">Public Key</p>
-              <p className="text-sm font-mono text-zinc-700 truncate">{project.publicKey}</p>
+              <MaskedKey value={project.publicKey} variant="field" />
             </div>
-            <CopyButton value={project.publicKey} variant="ghost" size="sm" />
           </div>
         </motion.div>
       </div>
