@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, FolderOpen, LayoutDashboard, Key, Sliders, Activity, Copy, Check, Palette, Settings } from "lucide-react";
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal";
-import { InlineLoader } from "@/components/shared/logo-loader";
+import { FullPageLoader } from "@/components/shared/logo-loader";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { ProjectOverview } from "@/components/dashboard/tabs/overview";
 import { ProjectKeys } from "@/components/dashboard/tabs/keys";
@@ -223,9 +223,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col bg-zinc-50 h-[calc(100vh-3.5rem)] overflow-hidden">
         {loading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <InlineLoader text="Loading..." />
-          </div>
+          <FullPageLoader text="Loading projects..." />
         ) : error ? (
           <div className="flex flex-1 flex-col items-center justify-center py-20">
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100">

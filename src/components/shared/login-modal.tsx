@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
 import { useLoginModal } from "@/hooks/use-login-modal";
+import { useLoading } from "@/components/shared/loading-provider";
 import { X } from "lucide-react";
 
 const RETURNING_KEY = "switchyy_returning";
@@ -22,6 +23,7 @@ function pickRandom<T>(arr: T[]): T {
 
 export function LoginModal() {
   const { open, closeLogin } = useLoginModal();
+  const { showLoading } = useLoading();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -65,6 +67,7 @@ export function LoginModal() {
         setSuccess(true);
         // Brief delay so user sees the success state, then hard navigate
         setTimeout(() => {
+          showLoading("Entering dashboard...");
           window.location.href = "/dashboard";
         }, 800);
       } else {
